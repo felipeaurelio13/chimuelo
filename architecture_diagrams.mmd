@@ -1,0 +1,43 @@
+graph TB
+    subgraph "Cliente (Navegador)"
+        PWA[React PWA]
+        SW[Service Worker]
+        IDB[(IndexedDB Cifrado)]
+        CRYPTO[Crypto Worker]
+    end
+    
+    subgraph "Cloudflare Edge"
+        WORKER[Cloudflare Worker]
+        KV[(KV Store - Rate Limiting)]
+    end
+    
+    subgraph "APIs Externas"
+        OPENAI[OpenAI API]
+        DUCK[DuckDuckGo API]
+    end
+    
+    subgraph "Almacenamiento Remoto"
+        GIST[GitHub Gist Privado]
+    end
+    
+    PWA -->|HTTPS + JWT| WORKER
+    PWA -->|Cifrado Local| IDB
+    PWA -->|Operaciones Crypto| CRYPTO
+    SW -->|Cache Offline| PWA
+    
+    WORKER -->|Rate Limited| KV
+    WORKER -->|API Key Oculta| OPENAI
+    WORKER -->|Proxy| DUCK
+    
+    PWA -->|Backup Cifrado| GIST
+    
+    classDef client fill:#e1f5fe
+    classDef edge fill:#f3e5f5
+    classDef external fill:#fff3e0
+    classDef storage fill:#e8f5e8
+    
+    class PWA,SW,IDB,CRYPTO client
+    class WORKER,KV edge
+    class OPENAI,DUCK external
+    class GIST storage
+

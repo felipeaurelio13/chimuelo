@@ -1,0 +1,104 @@
+graph TB
+    subgraph "App Root"
+        APP[App.jsx]
+        ROUTER[React Router]
+    end
+    
+    subgraph "Contexts"
+        AUTH_CTX[AuthContext]
+        DATA_CTX[DataContext]
+        THEME_CTX[ThemeContext]
+    end
+    
+    subgraph "Pages"
+        DASH[Dashboard]
+        CAPTURE[Capture]
+        TIMELINE[Timeline]
+        CHAT[Chat]
+        PROFILE[Profile]
+    end
+    
+    subgraph "Layout Components"
+        HEADER[Header]
+        NAV[BottomNavigation]
+        FAB[FloatingActionButton]
+        LAYOUT[MainLayout]
+    end
+    
+    subgraph "Common Components"
+        BUTTON[Button]
+        INPUT[Input]
+        MODAL[Modal]
+        LOADING[LoadingScreen]
+        ERROR[ErrorBoundary]
+    end
+    
+    subgraph "Specialized Components"
+        CHART[HealthChart]
+        RECORD[HealthRecord]
+        CHAT_MSG[ChatMessage]
+        TIMELINE_ITEM[TimelineItem]
+    end
+    
+    subgraph "Custom Hooks"
+        USE_AUTH[useAuth]
+        USE_DB[useDatabase]
+        USE_AI[useAI]
+        USE_SYNC[useSync]
+    end
+    
+    subgraph "Services"
+        API_SVC[API Services]
+        DB_SVC[Database Service]
+        CRYPTO_SVC[Encryption Service]
+        SYNC_SVC[Sync Service]
+    end
+    
+    APP --> ROUTER
+    APP --> AUTH_CTX
+    APP --> DATA_CTX
+    APP --> THEME_CTX
+    
+    ROUTER --> DASH
+    ROUTER --> CAPTURE
+    ROUTER --> TIMELINE
+    ROUTER --> CHAT
+    ROUTER --> PROFILE
+    
+    DASH --> LAYOUT
+    CAPTURE --> LAYOUT
+    TIMELINE --> LAYOUT
+    CHAT --> LAYOUT
+    PROFILE --> LAYOUT
+    
+    LAYOUT --> HEADER
+    LAYOUT --> NAV
+    LAYOUT --> FAB
+    
+    DASH --> CHART
+    DASH --> RECORD
+    TIMELINE --> TIMELINE_ITEM
+    CHAT --> CHAT_MSG
+    
+    USE_AUTH --> AUTH_CTX
+    USE_DB --> DATA_CTX
+    USE_AI --> API_SVC
+    USE_SYNC --> SYNC_SVC
+    
+    API_SVC --> DB_SVC
+    DB_SVC --> CRYPTO_SVC
+    
+    classDef root fill:#e1f5fe
+    classDef context fill:#f3e5f5
+    classDef page fill:#e8f5e8
+    classDef component fill:#fff3e0
+    classDef hook fill:#fce4ec
+    classDef service fill:#f1f8e9
+    
+    class APP,ROUTER root
+    class AUTH_CTX,DATA_CTX,THEME_CTX context
+    class DASH,CAPTURE,TIMELINE,CHAT,PROFILE page
+    class HEADER,NAV,FAB,LAYOUT,BUTTON,INPUT,MODAL,LOADING,ERROR,CHART,RECORD,CHAT_MSG,TIMELINE_ITEM component
+    class USE_AUTH,USE_DB,USE_AI,USE_SYNC hook
+    class API_SVC,DB_SVC,CRYPTO_SVC,SYNC_SVC service
+

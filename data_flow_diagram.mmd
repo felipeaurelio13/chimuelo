@@ -1,0 +1,59 @@
+sequenceDiagram
+    participant U as Usuario
+    participant PWA as React PWA
+    participant SW as Service Worker
+    participant IDB as IndexedDB
+    participant CW as Cloudflare Worker
+    participant AI as OpenAI API
+    participant SEARCH as DuckDuckGo
+    participant GIST as GitHub Gist
+
+    Note over U,GIST: Flujo de Captura y Procesamiento de Datos
+
+    U->>PWA: Sube foto/texto de salud
+    PWA->>PWA: Valida input
+    PWA->>CW: POST /api/openai/extract
+    Note right of CW: JWT Auth + Rate Limit
+    CW->>AI: Extrae datos estructurados
+    AI-->>CW: JSON con datos de salud
+    CW-->>PWA: Datos extraídos
+    
+    PWA->>PWA: Cifra datos localmente
+    PWA->>IDB: Almacena registro cifrado
+    IDB-->>PWA: Confirmación
+    
+    Note over U,GIST: Flujo de Chat con IA
+    
+    U->>PWA: Pregunta sobre salud
+    PWA->>CW: GET /api/search?q=consulta
+    CW->>SEARCH: Busca información médica
+    SEARCH-->>CW: Resultados filtrados
+    CW-->>PWA: Fuentes confiables
+    
+    PWA->>IDB: Obtiene contexto del niño
+    IDB-->>PWA: Registros relevantes
+    
+    PWA->>CW: POST /api/openai/chat
+    Note right of CW: Incluye contexto + búsquedas
+    CW->>AI: Chat completion
+    AI-->>CW: Respuesta contextualizada
+    CW-->>PWA: Respuesta final
+    
+    PWA->>IDB: Guarda conversación
+    
+    Note over U,GIST: Flujo de Sincronización
+    
+    PWA->>PWA: Cifra datos para backup
+    PWA->>GIST: Sube backup cifrado
+    GIST-->>PWA: Confirmación sync
+    
+    Note over U,GIST: Flujo Offline
+    
+    U->>PWA: Interacción sin internet
+    PWA->>SW: Verifica cache
+    SW-->>PWA: Datos cacheados
+    PWA->>IDB: Opera localmente
+    
+    Note over PWA: Cuando vuelve conexión
+    PWA->>CW: Sincroniza cambios pendientes
+

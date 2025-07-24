@@ -1,0 +1,116 @@
+# Maxi — Seguimiento de Salud & Crecimiento
+
+## 1 · Visión  
+Crear una web **minimalista, mobile-first y PWA offline-first** que:  
+1. Capture cualquier input (foto, PDF, audio, texto, video).  
+2. Procese todo con **OpenAI GPT-4.1 / GPT-4o** y devuelva JSON válido.  
+3. Mantenga **contexto vivo** (todos los inputs + búsquedas web) para contestar dudas con IA.  
+4. Funcione 100 % online y offline, sin mock data en ningún entorno.
+
+---
+
+## 2 · Funcionalidades Clave  
+| Categoría         | Descripción                                                                                      |
+|-------------------|---------------------------------------------------------------------------------------------------|
+| **Captura**       | Cámara, drag-&-drop, micro, grabación en vivo.                                                    |
+| **Extracción IA** | `extractData(input)` → JSON (peso, talla, síntomas, hitos, etc.) usando Structured Outputs.       |
+| **Búsqueda web**  | `searchWeb(source, query)` ⇒ citas de fuentes confiables (Cloudflare Worker proxy a DuckDuckGo).  |
+| **Timeline**      | Vista cronológica filtrable; modo “bebé dormido” (UI tenue).                                      |
+| **Chat de dudas** | GPT-4o con todo el contexto acumulado + resultados de `searchWeb`.                                |
+| **Insights**      | Gráficas percentiles; alertas locales (peso estancado, vacunas).                                  |
+| **Export**        | PDF/CSV del timeline completo; backup cifrado opcional en Gist privado.                           |
+
+---
+
+## 3 · Arquitectura Técnica
+
+lua
+Copiar
+Editar
++-------------------+        HTTPS        +-----------------------------+
+|    React PWA      |  ─────────────────▶ |  Cloudflare Worker (API)    |
+| (GitHub Pages)    |                    |  - Holds OPENAI_API_KEY     |
+|                   | ◀─────────────────  |  - /openai/* proxy          |
++-------------------+        JSON        |  - /search/* to DuckDuckGo  |
+       ▲   ▲                          +--|  - Rate-limit & logging     |
+       |   | Service Worker           |  +-----------------------------+
+       |   | (offline cache)          |
+       |   |                         IndexedDB   (encrypted, offline)
+       |   └─────────────────────────────────────────────────────▶
+yaml
+Copiar
+Editar
+
+- **Hosting**: Frontend en **GitHub Pages** (static).  
+- **API Proxy**: Lightweight **Cloudflare Worker** para ocultar `OPENAI_API_KEY` y gestionar búsqueda web. Exponer solo dos rutas: `/openai/*` y `/search/*`. :contentReference[oaicite:0]{index=0}  
+- **Almacenamiento local**: IndexedDB con cifrado AES; opcional sync a Gist privado mediante token personal.  
+- **PWA**: Service Worker cachea assets e inputs para uso offline.
+
+---
+
+## 4 · Seguridad & Privacidad  
+1. **Nunca** exponer `OPENAI_API_KEY` en el bundle cliente :contentReference[oaicite:1]{index=1}.  
+2. Worker con `env.OPENAI_API_KEY`, 100 RPM rate-limit.  
+3. Datos en IndexedDB cifrados simétricamente (`crypto.subtle`).  
+4. Gist remoto cifrado de la misma forma; token guardado en _local encrypted storage_ del navegador.
+
+---
+
+## 5 · Integración OpenAI
+
+### 5.1 Structured Outputs  
+- Definir un **JSON Schema** por tipo de output y usar la bandera `strict: true` para validación automática :contentReference[oaicite:2]{index=2}.  
+- Ejemplo `extractData` schema:  
+  ```jsonc
+  {
+    "type": "object",
+    "properties": {
+      "tipo": { "type": "string" },
+      "timestamp": { "type": "string", "format": "date-time" },
+      "datos": {
+        "type": "object",
+        "properties": {
+          "peso": { "type": "number" },
+          "talla": { "type": "number" },
+          "sintoma": { "type": "string" },
+          "hito": { "type": "string" }
+        },
+        "minProperties": 1
+      }
+    },
+    "required": ["tipo","timestamp","datos"]
+  }
+System Prompt minimal:
+
+“Eres un extractor de datos para la app ‘Maxi’. Devuelve solo JSON que cumpla con este schema: …”
+
+5.2 Parámetros
+Caso	Modelo	temperature	Tokens
+Extracción estricta	gpt-4.1	0.2	≤1024
+Chat de dudas	gpt-4o	0.7	≤2048
+
+Validación en cliente con AJV; reintentos ×2 si schema falla 
+OpenAI Community
+.
+
+6 · Tests (sin Mock Data)
+Nivel	Herramientas	Estrategia
+Unit	Jest + React Testing Library	Mock de fetch al Worker; responses grabadas de sandbox OpenAI (no dummy).
+Integration	Playwright	Flujo real: subir foto → JSON → timeline → pregunta en chat.
+E2E Prod	GitHub Actions nightly	Consulta real a Worker con cuota controlada; snapshot de salida.
+
+7 · CI/CD
+Lint/Test → GitHub Actions.
+
+Build PWA → push a gh-pages.
+
+Despliegue Cloudflare Worker via wrangler deploy desde el mismo pipeline.
+
+Release tags SemVer + Changelog automático.
+
+8 · Convenciones
+Commits: feat, fix, chore, etc. (feat(ui): add dark-sleep mode).
+
+Branches: main, feature/*, hotfix/*.
+
+Docs: Markdown, actualizado en cada PR.
