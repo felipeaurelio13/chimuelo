@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4F46E5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7C3AED;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="90" fill="url(#gradient)" />
+  
+  <!-- Stethoscope body -->
+  <path d="M60 80 Q100 60 140 80 Q140 100 120 120 L100 140 L80 120 Q60 100 60 80" 
+        fill="white" opacity="0.9"/>
+  
+  <!-- Heart symbol -->
+  <path d="M100 110 C95 105 85 105 85 115 C85 125 100 135 100 135 C100 135 115 125 115 115 C115 105 105 105 100 110 Z" 
+        fill="#FF6B6B"/>
+  
+  <!-- Medical cross -->
+  <rect x="95" y="50" width="10" height="30" fill="white"/>
+  <rect x="85" y="60" width="30" height="10" fill="white"/>
+</svg>
