@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import apiService from '../services/apiService';
 import SchemaService from '../services/schemas';
+import { aiCoordinator, type ProcessingResult } from '../services/aiAgents';
 import '../styles/Capture.css';
 
 interface CaptureData {
@@ -49,6 +50,11 @@ const Capture: React.FC = () => {
   const [processError, setProcessError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [customDate, setCustomDate] = useState<string>('');
+  
+  // Multi-agent AI state
+  const [aiProcessingResult, setAiProcessingResult] = useState<ProcessingResult | null>(null);
+  const [showClarificationDialog, setShowClarificationDialog] = useState(false);
+  const [userResponses, setUserResponses] = useState<{[question: string]: string}>({});
   
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -217,7 +223,7 @@ const Capture: React.FC = () => {
     }
   }, [isRecording]);
 
-  // Process with AI
+  // Process with multi-agent AI
   const processWithAI = useCallback(async () => {
     if (!captureData.input.trim()) {
       setProcessError('Por favor ingresa algún texto o adjunta un archivo');
@@ -229,88 +235,123 @@ const Capture: React.FC = () => {
     setShowPreview(false);
     
     try {
-      console.log('Iniciando procesamiento con IA:', {
-        input: captureData.input.substring(0, 100),
-        inputType: captureData.inputType
-      });
-
-      // Validar que tenemos el servicio de esquemas
-      if (!SchemaService || typeof SchemaService.getSchemaForInput !== 'function') {
-        throw new Error('Error de configuración: Servicio de esquemas no disponible');
-      }
-
-      // Get smart schema based on input content
-      const schema = SchemaService.getSchemaForInput(captureData.input, captureData.inputType);
+      console.log('🚀 Iniciando procesamiento multi-agente');
       
-      if (!schema) {
-        throw new Error('No se pudo determinar el esquema para procesar los datos');
-      }
-
-      console.log('Esquema seleccionado:', schema);
+      // Usar el coordinador de IA multi-agente
+      const result = await aiCoordinator.processInput(captureData.input);
       
-      // Validar que tenemos el servicio de API
-      if (!apiService || typeof apiService.extractData !== 'function') {
-        throw new Error('Error de configuración: Servicio de API no disponible');
-      }
-
-      const result = await apiService.extractData({
-        input: captureData.input,
-        inputType: captureData.inputType,
-        schema,
-        options: {
-          model: 'gpt-4-turbo-preview',
-          temperature: 0.2,
-          maxTokens: 1024
-        }
-      });
+      console.log('📊 Resultado del procesamiento:', result);
       
-      console.log('Resultado del procesamiento:', result);
+      setAiProcessingResult(result);
       
-      if (result.success && result.data) {
-        // Asegurar que siempre haya un timestamp
-        const extractedDataWithTimestamp = {
-          ...result.data,
-          timestamp: result.data.timestamp || new Date().toISOString()
-        };
-        setExtractedData(extractedDataWithTimestamp);
-        setShowPreview(true);
-        setProcessError(null);
+      // Si necesita clarificación, mostrar diálogo
+      if (result.clarificationNeeded) {
+        setShowClarificationDialog(true);
         
-        // Establecer la fecha personalizada con la fecha extraída o actual
-        const extractedDate = new Date(extractedDataWithTimestamp.data?.date || extractedDataWithTimestamp.timestamp);
-        setCustomDate(extractedDate.toISOString().split('T')[0]);
-        
-        // Validate extracted data
-        const validationResult = validateExtractedData(extractedDataWithTimestamp);
-        setValidation(validationResult);
+        // Inicializar respuestas vacías para las preguntas
+        const initialResponses: {[key: string]: string} = {};
+        result.questions.forEach(q => {
+          initialResponses[q] = '';
+        });
+        setUserResponses(initialResponses);
       } else {
-        const errorMsg = result.error || 'No se pudo procesar la información';
-        console.error('Error en el resultado:', errorMsg);
-        throw new Error(errorMsg);
+        // Procesar directamente si la confianza es alta
+        await processAiResult(result);
       }
       
     } catch (error: any) {
       console.error('Error procesando con IA:', error);
-      let errorMessage = 'Error desconocido al procesar';
-      
-      if (error.message) {
-        errorMessage = error.message;
-      } else if (error.name === 'NetworkError' || error.name === 'TypeError') {
-        errorMessage = 'Error de conexión. Por favor verifica tu conexión a internet';
-      } else if (error.name === 'TimeoutError') {
-        errorMessage = 'El procesamiento tardó demasiado. Por favor intenta de nuevo';
-      }
-      
-      setProcessError(errorMessage);
-      setValidation({
-        isValid: false,
-        errors: [errorMessage],
-        warnings: []
-      });
+      setProcessError(error.message || 'Error al procesar');
     } finally {
       setIsProcessing(false);
     }
   }, [captureData]);
+
+  // Procesar resultado de IA
+  const processAiResult = async (result: ProcessingResult) => {
+    const { finalData } = result;
+    
+    // Convertir a formato ExtractedData
+    const extractedData: ExtractedData = {
+      type: finalData.primaryType || 'note',
+      confidence: result.confidence,
+      timestamp: finalData.date || new Date().toISOString(),
+      data: {
+        ...finalData.weight && { value: finalData.weight.value, unit: finalData.weight.unit },
+        ...finalData.temperature && { value: finalData.temperature.value, unit: finalData.temperature.unit },
+        ...finalData.height && { value: finalData.height.value, unit: finalData.height.unit },
+        ...finalData.symptoms && { symptoms: finalData.symptoms },
+        ...finalData.medications && { medications: finalData.medications },
+        date: finalData.date || new Date().toISOString()
+      },
+      notes: generateNotes(result),
+      requiresAttention: finalData.urgencyLevel > 2
+    };
+    
+    setExtractedData(extractedData);
+    setShowPreview(true);
+    setShowClarificationDialog(false);
+    
+    // Establecer fecha personalizada
+    const extractedDate = new Date(finalData.date || new Date());
+    setCustomDate(extractedDate.toISOString().split('T')[0]);
+    
+    // Validar
+    const validationResult = validateExtractedData(extractedData);
+    setValidation(validationResult);
+  };
+
+  // Generar notas inteligentes basadas en el análisis
+  const generateNotes = (result: ProcessingResult): string => {
+    const notes: string[] = [];
+    const { finalData } = result;
+    
+    // Agregar resumen de hallazgos
+    if (finalData.weight) {
+      notes.push(`Peso: ${finalData.weight.value} ${finalData.weight.unit}`);
+    }
+    if (finalData.temperature) {
+      notes.push(`Temperatura: ${finalData.temperature.value}°C (${finalData.temperature.severity || 'normal'})`);
+    }
+    if (finalData.symptoms?.length > 0) {
+      notes.push(`Síntomas: ${finalData.symptoms.map((s: any) => s.name).join(', ')}`);
+    }
+    
+    // Agregar sugerencias si las hay
+    if (result.suggestions.length > 0) {
+      notes.push('\nSugerencias:');
+      result.suggestions.forEach(s => notes.push(`• ${s}`));
+    }
+    
+    // Agregar etiquetas automáticas
+    if (finalData.autoTags?.length > 0) {
+      notes.push(`\nEtiquetas: ${finalData.autoTags.join(', ')}`);
+    }
+    
+    return notes.join('\n');
+  };
+
+  // Manejar respuestas del usuario a las preguntas de clarificación
+  const handleClarificationSubmit = async () => {
+    if (!aiProcessingResult) return;
+    
+    setIsProcessing(true);
+    try {
+      // Re-procesar con las respuestas del usuario
+      const enhancedResult = await aiCoordinator.processUserResponse(
+        captureData.input,
+        userResponses,
+        aiProcessingResult
+      );
+      
+      await processAiResult(enhancedResult);
+    } catch (error: any) {
+      console.error('Error procesando clarificaciones:', error);
+      setProcessError(error.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   // Validate extracted data
   const validateExtractedData = (data: ExtractedData): ValidationResult => {
@@ -450,8 +491,8 @@ const Capture: React.FC = () => {
   return (
     <div className="capture-page">
       <header className="capture-header">
-        <button className="back-button" onClick={() => navigate(-1)}>
-          ←
+        <button className="back-button" onClick={() => navigate('/')}>
+          ← Volver
         </button>
         <h1>Capturar Datos</h1>
         <div className="header-actions">
@@ -467,33 +508,21 @@ const Capture: React.FC = () => {
         </div>
       </header>
 
-      <div className="capture-content">
-        {/* Quick Templates */}
-        <section className="quick-templates">
-          <h3>Plantillas rápidas</h3>
-          <div className="template-grid">
-            {quickTemplates.map((template, index) => (
-              <button
-                key={index}
-                className="template-button"
-                onClick={() => applyTemplate(template.template)}
-              >
-                {template.label}
-              </button>
-            ))}
-          </div>
-        </section>
+      <div className="capture-container">
+        <section className="capture-content">
+          <div className="input-section">
+            <h2>¿Qué quieres registrar?</h2>
+            <p className="helper-text">
+              Describe los datos de salud de forma natural. Nuestra IA analizará y extraerá la información relevante.
+            </p>
 
-        {/* Main Input Area */}
-        <section className="input-section">
-          <div className="input-header">
-            <h3>Describe lo que quieres registrar</h3>
-            <div className="input-type-selector">
+            {/* Input buttons remain the same */}
+            <div className="input-types">
               <button 
-                className={`type-button ${captureData.inputType === 'text' ? 'active' : ''}`}
+                className="type-button active"
                 onClick={() => setCaptureData(prev => ({ ...prev, inputType: 'text' }))}
               >
-                📝 Texto
+                ✏️ Texto
               </button>
               <button 
                 className="type-button"
@@ -520,16 +549,16 @@ const Capture: React.FC = () => {
             className="main-input"
             value={captureData.input}
             onChange={handleInputChange}
-            placeholder="Ejemplo: 'Maxi pesó 8.5kg hoy después del baño' o 'Tiene fiebre de 38.2°C y está un poco irritable'"
+            placeholder="Ejemplo: 'Mi bebé pesó 8.5kg hoy después del baño' o 'Tiene fiebre de 38.2°C desde ayer y está un poco irritable'"
             rows={6}
           />
 
-          {/* Smart Suggestions */}
-          {suggestions.length > 0 && (
+          {/* Smart Suggestions based on AI analysis */}
+          {aiProcessingResult?.suggestions && aiProcessingResult.suggestions.length > 0 && (
             <div className="suggestions">
-              <h4>💡 Sugerencias para completar:</h4>
+              <h4>💡 Sugerencias de la IA:</h4>
               <ul>
-                {suggestions.map((suggestion, index) => (
+                {aiProcessingResult.suggestions.map((suggestion, index) => (
                   <li key={index}>{suggestion}</li>
                 ))}
               </ul>
@@ -571,7 +600,7 @@ const Capture: React.FC = () => {
               {isProcessing ? (
                 <span className="processing">
                   <span className="spinner"></span>
-                  Procesando con IA...
+                  Analizando con IA multi-agente...
                 </span>
               ) : (
                 '🧠 Procesar con IA'
@@ -597,7 +626,41 @@ const Capture: React.FC = () => {
           )}
         </section>
 
-        {/* Preview Section */}
+        {/* Clarification Dialog */}
+        {showClarificationDialog && aiProcessingResult && (
+          <div className="clarification-dialog">
+            <h3>🤔 Necesito aclarar algunos puntos</h3>
+            <p className="confidence-info">
+              Confianza actual: {Math.round(aiProcessingResult.confidence * 100)}%
+            </p>
+            
+            {aiProcessingResult.questions.map((question, index) => (
+              <div key={index} className="clarification-question">
+                <label>{question}</label>
+                <input
+                  type="text"
+                  value={userResponses[question] || ''}
+                  onChange={(e) => setUserResponses(prev => ({
+                    ...prev,
+                    [question]: e.target.value
+                  }))}
+                  placeholder="Tu respuesta..."
+                />
+              </div>
+            ))}
+            
+            <div className="clarification-actions">
+              <button onClick={() => setShowClarificationDialog(false)}>
+                Cancelar
+              </button>
+              <button onClick={handleClarificationSubmit} className="primary">
+                Continuar con estas respuestas
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Preview Section - remains mostly the same */}
         {showPreview && extractedData && (
           <section className="preview-section">
             <div className="preview-header">
@@ -606,6 +669,47 @@ const Capture: React.FC = () => {
                 Confianza: {Math.round(extractedData.confidence * 100)}%
               </div>
             </div>
+
+            {/* AI Agents Analysis Summary */}
+            {aiProcessingResult && (
+              <div className="ai-analysis-summary">
+                <h4>🤖 Análisis Multi-Agente</h4>
+                <div className="agents-grid">
+                  {aiProcessingResult.agentResponses.map((agent, index) => (
+                    <div key={index} className="agent-card">
+                      <div className="agent-header">
+                        <span className="agent-name">{agent.agentName}</span>
+                        <span className={`agent-confidence ${agent.confidence > 0.7 ? 'high' : agent.confidence > 0.4 ? 'medium' : 'low'}`}>
+                          {Math.round(agent.confidence * 100)}%
+                        </span>
+                      </div>
+                      <div className="agent-findings">
+                        {Object.keys(agent.findings).length > 0 ? (
+                          <ul>
+                            {Object.entries(agent.findings).slice(0, 3).map(([key, value], i) => (
+                              <li key={i}>
+                                <strong>{key}:</strong> {
+                                  typeof value === 'object' 
+                                    ? JSON.stringify(value).substring(0, 50) + '...' 
+                                    : String(value)
+                                }
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p>Sin hallazgos específicos</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {aiProcessingResult.consensus ? (
+                  <p className="consensus-status success">✅ Los agentes llegaron a un consenso</p>
+                ) : (
+                  <p className="consensus-status warning">⚠️ Los agentes tienen opiniones diferentes</p>
+                )}
+              </div>
+            )}
 
             {/* Validation Messages */}
             {validation.errors.length > 0 && (
