@@ -15,6 +15,8 @@ interface CaptureData {
     timestamp: Date;
     location?: GeolocationCoordinates;
     context?: string;
+    fileType?: string;
+    fileName?: string;
   };
 }
 
@@ -119,8 +121,10 @@ const Capture: React.FC = () => {
 
   // Handle file upload
   const handleFileUpload = useCallback((file: File) => {
+    console.log('Archivo cargado:', file.name, file.type);
+    
     if (file.type.startsWith('image/')) {
-      // Para imágenes, crear preview y mantener referencia al archivo
+      // Para imágenes, crear preview y placeholder
       const reader = new FileReader();
       reader.onload = (e) => {
         setImagePreview(e.target?.result as string);
@@ -128,32 +132,43 @@ const Capture: React.FC = () => {
       reader.readAsDataURL(file);
       
       setCaptureData({
-        input: `[Imagen adjunta: ${file.name}]`,
+        input: `[Imagen adjunta: ${file.name}] Por favor describe el contenido de esta imagen médica.`,
         inputType: 'image',
         file,
         metadata: {
           timestamp: new Date(),
-          context: `Imagen: ${file.name}`
+          context: `Imagen: ${file.name}`,
+          fileType: 'image',
+          fileName: file.name
         }
       });
     } else if (file.type === 'application/pdf') {
+      // Para PDFs, indicar que es un documento
       setCaptureData({
-        input: `[PDF adjunto: ${file.name}]`,
+        input: `[PDF adjunto: ${file.name}] Por favor describe el contenido de este documento médico.`,
         inputType: 'pdf',
         file,
         metadata: {
           timestamp: new Date(),
-          context: `PDF: ${file.name}`
+          context: `PDF: ${file.name}`,
+          fileType: 'pdf',
+          fileName: file.name
         }
       });
+      
+      // Mostrar mensaje informativo
+      setProcessError('ℹ️ PDF detectado. Por favor describe brevemente qué tipo de documento es (ej: "análisis de sangre", "receta médica", etc.)');
     } else if (file.type.startsWith('audio/')) {
+      // Para audio
       setCaptureData({
         input: `[Audio adjunto: ${file.name}]`,
         inputType: 'audio',
         file,
         metadata: {
           timestamp: new Date(),
-          context: `Audio: ${file.name}`
+          context: `Audio: ${file.name}`,
+          fileType: 'audio',
+          fileName: file.name
         }
       });
     } else {
@@ -167,7 +182,9 @@ const Capture: React.FC = () => {
           file,
           metadata: {
             timestamp: new Date(),
-            context: `Archivo: ${file.name}`
+            context: `Archivo: ${file.name}`,
+            fileType: 'text',
+            fileName: file.name
           }
         });
       };
@@ -237,8 +254,11 @@ const Capture: React.FC = () => {
     try {
       console.log('🚀 Iniciando procesamiento multi-agente');
       
-      // Usar el coordinador de IA multi-agente
-      const result = await aiCoordinator.processInput(captureData.input);
+      // Usar el coordinador de IA multi-agente con metadata
+      const result = await aiCoordinator.processInput(
+        captureData.input,
+        captureData.metadata
+      );
       
       console.log('📊 Resultado del procesamiento:', result);
       
@@ -620,8 +640,14 @@ const Capture: React.FC = () => {
 
           {/* Error Message */}
           {processError && !showPreview && (
-            <div className="error-message" style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#fee', borderRadius: '8px', color: '#c00' }}>
-              ⚠️ {processError}
+            <div className={`error-message ${processError.startsWith('ℹ️') ? 'info' : ''}`} style={{ 
+              marginTop: '1rem', 
+              padding: '1rem', 
+              backgroundColor: processError.startsWith('ℹ️') ? '#e0f2fe' : '#fee', 
+              borderRadius: '8px', 
+              color: processError.startsWith('ℹ️') ? '#0369a1' : '#c00' 
+            }}>
+              {processError}
             </div>
           )}
         </section>

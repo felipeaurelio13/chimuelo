@@ -19,7 +19,7 @@ export interface ProcessingResult {
   agentResponses: AgentResponse[];
 }
 
-// Agente 1: Extractor de Datos Médicos
+// Agente 1: Extractor de Datos Médicos Mejorado
 class MedicalDataExtractor {
   name = 'Extractor Médico';
   
@@ -28,34 +28,77 @@ class MedicalDataExtractor {
     const questions: string[] = [];
     let confidence = 0;
     
-    // Análisis profundo de peso
+    // Análisis mejorado de peso con múltiples formatos
     const pesoPatterns = [
-      /(\d+(?:[.,]\d+)?)\s*(?:kg|kilos?|kilogramos?)/i,
+      // Formato con punto como separador de miles: 3.550 kg
+      /(\d{1,2}[.,]\d{3})\s*(?:kg|kilos?|kilogramos?)/i,
+      // Formato con coma decimal: 3,550 kg
+      /(\d+),(\d{3})\s*(?:kg|kilos?|kilogramos?)/i,
+      // Formato estándar: 8.5 kg o 8,5 kg
+      /(\d+(?:[.,]\d{1,2})?)\s*(?:kg|kilos?|kilogramos?)/i,
+      // Solo números seguidos de contexto de peso
       /pes[aó]\s+(\d+(?:[.,]\d+)?)/i,
-      /(\d+(?:[.,]\d+)?)\s*(?:gramos?|gr?)\s*(?:de\s*peso)?/i
+      // Gramos
+      /(\d+(?:[.,]\d+)?)\s*(?:gramos?|grs?|g)\b/i
     ];
     
     for (const pattern of pesoPatterns) {
       const match = input.match(pattern);
       if (match) {
-        const value = parseFloat(match[1].replace(',', '.'));
+        let value: number;
         
-        // Convertir gramos a kg si es necesario
-        if (pattern.toString().includes('gramos')) {
-          findings.weight = { value: value / 1000, unit: 'kg', originalUnit: 'g' };
+        // Manejo especial para formato con punto como separador de miles
+        if (pattern.toString().includes('\\d{3}')) {
+          if (match[2]) {
+            // Formato 3,550 kg
+            value = parseFloat(match[1] + '.' + match[2]);
+          } else {
+            // Formato 3.550 kg - interpretar como 3550 gramos = 3.55 kg
+            const numStr = match[1].replace(/[.,]/, '');
+            value = parseInt(numStr) / 1000;
+          }
+        } else if (pattern.toString().includes('gramos')) {
+          // Convertir gramos a kg
+          value = parseFloat(match[1].replace(',', '.')) / 1000;
+          findings.weight = { value, unit: 'kg', originalValue: parseFloat(match[1].replace(',', '.')), originalUnit: 'g' };
         } else {
+          // Formato estándar
+          value = parseFloat(match[1].replace(',', '.'));
           findings.weight = { value, unit: 'kg' };
         }
         
-        // Validar rango razonable para bebés/niños
-        if (value < 0.5 || value > 50) {
-          questions.push(`¿El peso ${value} kg es correcto? Parece fuera del rango normal.`);
+        // Validación inteligente del peso para bebés/niños
+        if (value < 0.5) {
+          questions.push(`El peso detectado es ${value} kg (${value * 1000}g). ¿Es correcto? Parece muy bajo para un bebé.`);
+          confidence -= 0.3;
+        } else if (value > 30) {
+          questions.push(`El peso detectado es ${value} kg. ¿Es correcto? Parece alto para un niño pequeño.`);
           confidence -= 0.2;
+        } else if (value >= 0.5 && value <= 2) {
+          // Peso de recién nacido
+          findings.weight.category = 'newborn';
+          confidence += 0.3;
+        } else if (value > 2 && value <= 15) {
+          // Peso normal para bebé/niño pequeño
+          findings.weight.category = 'infant';
+          confidence += 0.4;
         } else {
           confidence += 0.3;
         }
+        
+        // Si detectamos un formato ambiguo, preguntar
+        if (match[0].includes('.') && match[1].includes('.')) {
+          questions.push(`Detecté el peso como ${value} kg. ¿El punto es separador de miles (3.550 = tres kilos y medio) o decimal (3.550 = tres kilos quinientos cincuenta)?`);
+        }
+        
         break;
       }
+    }
+    
+    // Detectar menciones de peso sin valor claro
+    if (!findings.weight && /peso|pes[aó]|kilos?|gramos?/i.test(input)) {
+      questions.push('Mencionas el peso pero no pude identificar el valor exacto. ¿Cuánto pesa?');
+      findings.possibleWeight = true;
     }
     
     // Análisis profundo de temperatura
@@ -72,29 +115,39 @@ class MedicalDataExtractor {
         const value = parseFloat(match[1].replace(',', '.'));
         findings.temperature = { value, unit: '°C' };
         
-        // Analizar severidad
-        if (value >= 39) {
-          findings.temperature.severity = 'alta';
-          findings.temperature.requiresAttention = true;
-        } else if (value >= 38) {
-          findings.temperature.severity = 'moderada';
-          findings.temperature.requiresAttention = true;
-        } else if (value >= 37.5) {
-          findings.temperature.severity = 'leve';
+        // Validación de rango de temperatura
+        if (value < 35) {
+          questions.push(`La temperatura ${value}°C parece muy baja. ¿Es correcta?`);
+          confidence -= 0.2;
+        } else if (value > 42) {
+          questions.push(`La temperatura ${value}°C parece muy alta. ¿Es correcta?`);
+          confidence -= 0.2;
+        } else {
+          // Analizar severidad
+          if (value >= 39) {
+            findings.temperature.severity = 'alta';
+            findings.temperature.requiresAttention = true;
+          } else if (value >= 38) {
+            findings.temperature.severity = 'moderada';
+            findings.temperature.requiresAttention = true;
+          } else if (value >= 37.5) {
+            findings.temperature.severity = 'leve';
+          } else {
+            findings.temperature.severity = 'normal';
+          }
+          confidence += 0.3;
         }
-        
-        confidence += 0.3;
         break;
       }
     }
     
     // Detectar menciones de fiebre sin temperatura específica
-    if (!findings.temperature && /fiebre|calentura|caliente/i.test(input)) {
+    if (!findings.temperature && /fiebre|calentura|caliente|febril/i.test(input)) {
       questions.push('Mencionas fiebre pero no especificas la temperatura. ¿Cuántos grados tiene?');
       findings.possibleFever = true;
     }
     
-    // Análisis de altura/talla
+    // Análisis de altura/talla con validación
     const alturaPatterns = [
       /(\d+(?:[.,]\d+)?)\s*(?:cm|centímetros?)/i,
       /(?:mide|altura|talla)\s*(?:de\s*)?(\d+(?:[.,]\d+)?)/i
@@ -104,18 +157,29 @@ class MedicalDataExtractor {
       const match = input.match(pattern);
       if (match) {
         const value = parseFloat(match[1].replace(',', '.'));
-        findings.height = { value, unit: 'cm' };
-        confidence += 0.2;
+        
+        // Validación de rango para bebés/niños
+        if (value < 40) {
+          questions.push(`La altura ${value} cm parece muy baja. ¿Es correcta?`);
+          confidence -= 0.2;
+        } else if (value > 150) {
+          questions.push(`La altura ${value} cm parece alta para un niño pequeño. ¿Es correcta?`);
+          confidence -= 0.1;
+        } else {
+          findings.height = { value, unit: 'cm' };
+          confidence += 0.2;
+        }
         break;
       }
     }
     
-    // Análisis de síntomas
+    // Análisis mejorado de síntomas
     const symptoms = {
-      respiratorios: ['tos', 'mocos', 'congestión', 'estornudos', 'flemas'],
-      digestivos: ['vómito', 'diarrea', 'estreñimiento', 'dolor de panza', 'náuseas'],
-      piel: ['sarpullido', 'eruption', 'ronchas', 'manchas', 'granitos'],
-      generales: ['dolor', 'llanto', 'irritable', 'decaído', 'cansado', 'somnoliento']
+      respiratorios: ['tos', 'mocos', 'congestión', 'estornudos', 'flemas', 'dificultad respiratoria', 'ahogo'],
+      digestivos: ['vómito', 'vomitó', 'diarrea', 'estreñimiento', 'dolor de panza', 'náuseas', 'no quiere comer'],
+      piel: ['sarpullido', 'eruption', 'ronchas', 'manchas', 'granitos', 'enrojecimiento', 'picazón'],
+      generales: ['dolor', 'llanto', 'irritable', 'decaído', 'cansado', 'somnoliento', 'no juega'],
+      neurológicos: ['convulsión', 'temblor', 'rigidez', 'no responde']
     };
     
     findings.symptoms = [];
@@ -124,19 +188,32 @@ class MedicalDataExtractor {
         if (input.toLowerCase().includes(symptom)) {
           findings.symptoms.push({ name: symptom, category });
           confidence += 0.1;
+          
+          // Síntomas que requieren atención inmediata
+          if (['convulsión', 'dificultad respiratoria', 'no responde'].includes(symptom)) {
+            findings.urgentSymptoms = true;
+            questions.push(`⚠️ Detecté ${symptom}. ¿Esto está ocurriendo ahora mismo?`);
+          }
         }
       }
     }
     
+    // Detectar contexto de documentos
+    if (input.includes('[PDF adjunto]') || input.includes('[Imagen adjunta]')) {
+      questions.push('Detecté un archivo adjunto. ¿Qué tipo de documento es? (ej: resultados de laboratorio, receta médica, etc.)');
+      findings.hasAttachment = true;
+      confidence -= 0.2; // Reducir confianza porque no podemos ver el contenido real
+    }
+    
     // Calcular confianza final
-    confidence = Math.min(confidence, 1);
+    confidence = Math.max(0, Math.min(confidence, 1));
     
     return {
       agentName: this.name,
       confidence,
       findings,
       questions,
-      requiresConfirmation: questions.length > 0
+      requiresConfirmation: questions.length > 0 || confidence < 0.6
     };
   }
 }
@@ -415,7 +492,82 @@ class IntelligentClassifier {
   }
 }
 
-// Coordinador Principal
+// Agente 5: Detector de Documentos (NUEVO)
+class DocumentAnalyzer {
+  name = 'Analizador de Documentos';
+  
+  async analyze(input: string): Promise<AgentResponse> {
+    const findings: any = {};
+    const questions: string[] = [];
+    const suggestions: string[] = [];
+    let confidence = 0;
+    
+    // Detectar tipos de documentos mencionados
+    const documentTypes = {
+      'laboratorio': /(?:examen|análisis|resultado|laboratorio|hemograma|orina|sangre)/i,
+      'receta': /(?:receta|prescripción|medicamento|dosis|tratamiento)/i,
+      'vacuna': /(?:vacuna|inmunización|carnet|esquema)/i,
+      'consulta': /(?:consulta|diagnóstico|informe|médico|pediatra)/i,
+      'imagen': /(?:radiografía|ecografía|tomografía|resonancia|rx|eco)/i
+    };
+    
+    for (const [type, pattern] of Object.entries(documentTypes)) {
+      if (pattern.test(input)) {
+        findings.documentType = type;
+        confidence += 0.3;
+        
+        switch(type) {
+          case 'laboratorio':
+            questions.push('¿Qué valores específicos del examen quieres registrar?');
+            suggestions.push('Puedes mencionar valores como hemoglobina, glóbulos blancos, etc.');
+            break;
+          case 'receta':
+            questions.push('¿Cuáles son los medicamentos y dosis indicadas?');
+            break;
+          case 'vacuna':
+            questions.push('¿Qué vacuna(s) se aplicaron y en qué fecha?');
+            break;
+        }
+        break;
+      }
+    }
+    
+    // Si hay un archivo adjunto pero no se identifica el tipo
+    if ((input.includes('[PDF adjunto]') || input.includes('[Imagen adjunta]')) && !findings.documentType) {
+      findings.unknownDocument = true;
+      questions.push('No pude identificar el tipo de documento. ¿Puedes describir qué contiene?');
+      suggestions.push('Por ejemplo: "Es un análisis de sangre con los siguientes valores..."');
+      confidence = 0.2;
+    }
+    
+    // Detectar valores numéricos que podrían ser de laboratorio
+    const labValuePattern = /(\w+)[:\s]+(\d+(?:[.,]\d+)?)\s*(\w+)?/g;
+    const matches = Array.from(input.matchAll(labValuePattern));
+    
+    if (matches.length > 2) {
+      findings.possibleLabValues = matches.map(m => ({
+        parameter: m[1],
+        value: parseFloat(m[2].replace(',', '.')),
+        unit: m[3] || ''
+      }));
+      
+      if (!findings.documentType) {
+        findings.documentType = 'laboratorio';
+        suggestions.push('Parece que estás ingresando resultados de laboratorio. ¿Es correcto?');
+      }
+    }
+    
+    return {
+      agentName: this.name,
+      confidence,
+      findings,
+      questions,
+      suggestions
+    };
+  }
+}
+
+// Coordinador Principal Mejorado
 export class AIProcessingCoordinator {
   private agents: any[];
   
@@ -424,12 +576,19 @@ export class AIProcessingCoordinator {
       new MedicalDataExtractor(),
       new TemporalAnalyzer(),
       new ContextValidator(),
-      new IntelligentClassifier()
+      new IntelligentClassifier(),
+      new DocumentAnalyzer() // Nuevo agente
     ];
   }
   
-  async processInput(input: string): Promise<ProcessingResult> {
+  async processInput(input: string, metadata?: any): Promise<ProcessingResult> {
     console.log('🧠 Iniciando procesamiento multi-agente para:', input);
+    
+    // Si es un PDF o imagen, agregar contexto
+    let enhancedInput = input;
+    if (metadata?.fileType === 'pdf' || metadata?.fileType === 'image') {
+      enhancedInput = `[${metadata.fileType.toUpperCase()} adjunto: ${metadata.fileName}] ${input}`;
+    }
     
     const agentResponses: AgentResponse[] = [];
     const allFindings: any[] = [];
@@ -441,9 +600,9 @@ export class AIProcessingCoordinator {
       
       if (agent.name === 'Validador de Contexto' || agent.name === 'Clasificador Inteligente') {
         // Estos agentes necesitan los hallazgos previos
-        response = await agent.analyze(input, allFindings);
+        response = await agent.analyze(enhancedInput, allFindings);
       } else {
-        response = await agent.analyze(input);
+        response = await agent.analyze(enhancedInput);
       }
       
       agentResponses.push(response);
@@ -455,20 +614,25 @@ export class AIProcessingCoordinator {
     // Fase 2: Consolidación de resultados
     const consolidatedData = this.consolidateFindings(allFindings);
     
-    // Fase 3: Cálculo de consenso
+    // Fase 3: Cálculo de consenso mejorado
     const avgConfidence = agentResponses.reduce((sum, r) => sum + r.confidence, 0) / agentResponses.length;
-    const consensus = agentResponses.every(r => r.confidence > 0.5);
+    const consensus = agentResponses.filter(r => r.confidence > 0.5).length >= 3;
     
     // Fase 4: Recopilar todas las preguntas y sugerencias
     const allQuestions = agentResponses.flatMap(r => r.questions || []);
     const allSuggestions = agentResponses.flatMap(r => r.suggestions || []);
     
-    // Eliminar duplicados
-    const uniqueQuestions = [...new Set(allQuestions)];
+    // Eliminar duplicados y priorizar preguntas urgentes
+    const uniqueQuestions = [...new Set(allQuestions)].sort((a, b) => {
+      if (a.includes('⚠️')) return -1;
+      if (b.includes('⚠️')) return 1;
+      return 0;
+    });
     const uniqueSuggestions = [...new Set(allSuggestions)];
     
     // Fase 5: Determinar si necesita clarificación
-    const clarificationNeeded = uniqueQuestions.length > 0 || avgConfidence < 0.7;
+    const clarificationNeeded = uniqueQuestions.length > 0 || avgConfidence < 0.6 || 
+                               agentResponses.some(r => r.requiresConfirmation);
     
     return {
       finalData: consolidatedData,
