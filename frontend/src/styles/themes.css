@@ -1,0 +1,152 @@
+/* Sistema de Temas - Variables CSS */
+
+:root {
+  /* Modo claro por defecto */
+  color-scheme: light;
+  
+  /* Colores principales */
+  --color-primary: #4f46e5;
+  --color-primary-hover: #4338ca;
+  --color-primary-light: #e0e7ff;
+  
+  /* Fondos */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #f3f4f6;
+  --bg-card: #ffffff;
+  --bg-hover: #f8f9fa;
+  
+  /* Textos */
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --text-inverse: #ffffff;
+  
+  /* Bordes */
+  --border-primary: #e5e7eb;
+  --border-secondary: #d1d5db;
+  --border-focus: #4f46e5;
+  
+  /* Estados */
+  --color-success: #10b981;
+  --color-success-bg: #d1fae5;
+  --color-warning: #f59e0b;
+  --color-warning-bg: #fed7aa;
+  --color-error: #ef4444;
+  --color-error-bg: #fee2e2;
+  --color-info: #3b82f6;
+  --color-info-bg: #dbeafe;
+  
+  /* Sombras */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+  
+  /* Overlays */
+  --overlay-bg: rgba(0, 0, 0, 0.5);
+  --overlay-light: rgba(255, 255, 255, 0.1);
+  
+  /* Transiciones */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 300ms ease;
+}
+
+/* Modo oscuro */
+[data-theme="dark"] {
+  color-scheme: dark;
+  
+  /* Colores principales (más brillantes en dark) */
+  --color-primary: #6366f1;
+  --color-primary-hover: #7c3aed;
+  --color-primary-light: #312e81;
+  
+  /* Fondos */
+  --bg-primary: #0f0f0f;
+  --bg-secondary: #1a1a1a;
+  --bg-tertiary: #262626;
+  --bg-card: #1a1a1a;
+  --bg-hover: #262626;
+  
+  /* Textos */
+  --text-primary: #f3f4f6;
+  --text-secondary: #d1d5db;
+  --text-tertiary: #9ca3af;
+  --text-inverse: #0f0f0f;
+  
+  /* Bordes */
+  --border-primary: #374151;
+  --border-secondary: #4b5563;
+  --border-focus: #6366f1;
+  
+  /* Estados (ajustados para dark) */
+  --color-success: #34d399;
+  --color-success-bg: #064e3b;
+  --color-warning: #fbbf24;
+  --color-warning-bg: #78350f;
+  --color-error: #f87171;
+  --color-error-bg: #7f1d1d;
+  --color-info: #60a5fa;
+  --color-info-bg: #1e3a8a;
+  
+  /* Sombras (más sutiles en dark) */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.7);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.9);
+  
+  /* Overlays */
+  --overlay-bg: rgba(0, 0, 0, 0.7);
+  --overlay-light: rgba(255, 255, 255, 0.05);
+}
+
+/* Media query para respetar preferencia del sistema cuando no hay tema guardado */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    
+    /* Copiar todas las variables del modo oscuro */
+    --color-primary: #6366f1;
+    --color-primary-hover: #7c3aed;
+    --color-primary-light: #312e81;
+    --bg-primary: #0f0f0f;
+    --bg-secondary: #1a1a1a;
+    --bg-tertiary: #262626;
+    --bg-card: #1a1a1a;
+    --bg-hover: #262626;
+    --text-primary: #f3f4f6;
+    --text-secondary: #d1d5db;
+    --text-tertiary: #9ca3af;
+    --text-inverse: #0f0f0f;
+    --border-primary: #374151;
+    --border-secondary: #4b5563;
+    --border-focus: #6366f1;
+    --color-success: #34d399;
+    --color-success-bg: #064e3b;
+    --color-warning: #fbbf24;
+    --color-warning-bg: #78350f;
+    --color-error: #f87171;
+    --color-error-bg: #7f1d1d;
+    --color-info: #60a5fa;
+    --color-info-bg: #1e3a8a;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.7);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.9);
+    --overlay-bg: rgba(0, 0, 0, 0.7);
+    --overlay-light: rgba(255, 255, 255, 0.05);
+  }
+}
+
+/* Utilidades para transiciones suaves */
+* {
+  transition: background-color var(--transition-normal),
+              color var(--transition-normal),
+              border-color var(--transition-normal);
+}
+
+/* Desactivar transiciones cuando se cambia el tema */
+html.theme-transition-disabled * {
+  transition: none !important;
+}
