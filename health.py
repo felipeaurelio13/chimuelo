@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+# from flask_jwt_extended import jwt_required, get_jwt_identity  # Deshabilitado para MVP local
 from src.models.user import User, db
 from src.models.health_models import Child, HealthRecord, ChatHistory, Insight, SyncLog, AuditLog
 from src.utils.auth_utils import AuthUtils, SecurityValidator, rate_limiter
@@ -10,11 +10,12 @@ import requests
 health_bp = Blueprint('health', __name__)
 
 @health_bp.route('/children', methods=['GET'])
-@jwt_required()
+# @jwt_required()  # Deshabilitado para MVP local
 def get_children():
     """Obtiene la lista de hijos del usuario autenticado"""
     try:
-        current_user_id = get_jwt_identity()
+        # current_user_id = get_jwt_identity()  # Deshabilitado para MVP local
+        current_user_id = 'local-user'  # Valor fijo para pruebas locales
         
         children = Child.query.filter_by(user_id=current_user_id, is_active=True).all()
         
@@ -27,11 +28,12 @@ def get_children():
         return jsonify({'error': f'Error interno del servidor: {str(e)}'}), 500
 
 @health_bp.route('/children', methods=['POST'])
-@jwt_required()
+# @jwt_required()  # Deshabilitado para MVP local
 def create_child():
     """Crea un nuevo perfil de hijo"""
     try:
-        current_user_id = get_jwt_identity()
+        # current_user_id = get_jwt_identity()  # Deshabilitado para MVP local
+        current_user_id = 'local-user'  # Valor fijo para pruebas locales
         
         data = request.get_json()
         if not data:
@@ -101,11 +103,12 @@ def create_child():
         return jsonify({'error': f'Error interno del servidor: {str(e)}'}), 500
 
 @health_bp.route('/children/<child_id>', methods=['PUT'])
-@jwt_required()
+# @jwt_required()  # Deshabilitado para MVP local
 def update_child(child_id):
     """Actualiza el perfil de un hijo"""
     try:
-        current_user_id = get_jwt_identity()
+        # current_user_id = get_jwt_identity()  # Deshabilitado para MVP local
+        current_user_id = 'local-user'  # Valor fijo para pruebas locales
         
         # Validar UUID
         if not SecurityValidator.validate_uuid(child_id):
@@ -161,11 +164,12 @@ def update_child(child_id):
         return jsonify({'error': f'Error interno del servidor: {str(e)}'}), 500
 
 @health_bp.route('/children/<child_id>/records', methods=['GET'])
-@jwt_required()
+# @jwt_required()  # Deshabilitado para MVP local
 def get_health_records(child_id):
     """Obtiene los registros de salud de un niño"""
     try:
-        current_user_id = get_jwt_identity()
+        # current_user_id = get_jwt_identity()  # Deshabilitado para MVP local
+        current_user_id = 'local-user'  # Valor fijo para pruebas locales
         
         # Validar UUID
         if not SecurityValidator.validate_uuid(child_id):
@@ -219,11 +223,12 @@ def get_health_records(child_id):
         return jsonify({'error': f'Error interno del servidor: {str(e)}'}), 500
 
 @health_bp.route('/children/<child_id>/records', methods=['POST'])
-@jwt_required()
+# @jwt_required()  # Deshabilitado para MVP local
 def create_health_record(child_id):
     """Crea un nuevo registro de salud"""
     try:
-        current_user_id = get_jwt_identity()
+        # current_user_id = get_jwt_identity()  # Deshabilitado para MVP local
+        current_user_id = 'local-user'  # Valor fijo para pruebas locales
         
         # Validar UUID
         if not SecurityValidator.validate_uuid(child_id):
@@ -306,11 +311,12 @@ def create_health_record(child_id):
         return jsonify({'error': f'Error interno del servidor: {str(e)}'}), 500
 
 @health_bp.route('/children/<child_id>/chat', methods=['GET'])
-@jwt_required()
+# @jwt_required()  # Deshabilitado para MVP local
 def get_chat_history(child_id):
     """Obtiene el historial de chat de un niño"""
     try:
-        current_user_id = get_jwt_identity()
+        # current_user_id = get_jwt_identity()  # Deshabilitado para MVP local
+        current_user_id = 'local-user'  # Valor fijo para pruebas locales
         
         # Validar UUID
         if not SecurityValidator.validate_uuid(child_id):
@@ -354,11 +360,12 @@ def get_chat_history(child_id):
         return jsonify({'error': f'Error interno del servidor: {str(e)}'}), 500
 
 @health_bp.route('/children/<child_id>/chat', methods=['POST'])
-@jwt_required()
+# @jwt_required()  # Deshabilitado para MVP local
 def save_chat_message(child_id):
     """Guarda un mensaje de chat"""
     try:
-        current_user_id = get_jwt_identity()
+        # current_user_id = get_jwt_identity()  # Deshabilitado para MVP local
+        current_user_id = 'local-user'  # Valor fijo para pruebas locales
         
         # Validar UUID
         if not SecurityValidator.validate_uuid(child_id):
@@ -410,11 +417,12 @@ def save_chat_message(child_id):
         return jsonify({'error': f'Error interno del servidor: {str(e)}'}), 500
 
 @health_bp.route('/children/<child_id>/insights', methods=['GET'])
-@jwt_required()
+# @jwt_required()  # Deshabilitado para MVP local
 def get_insights(child_id):
     """Obtiene los insights de un niño"""
     try:
-        current_user_id = get_jwt_identity()
+        # current_user_id = get_jwt_identity()  # Deshabilitado para MVP local
+        current_user_id = 'local-user'  # Valor fijo para pruebas locales
         
         # Validar UUID
         if not SecurityValidator.validate_uuid(child_id):
@@ -476,11 +484,12 @@ def get_insights(child_id):
         return jsonify({'error': f'Error interno del servidor: {str(e)}'}), 500
 
 @health_bp.route('/search', methods=['GET'])
-@jwt_required()
+# @jwt_required()  # Deshabilitado para MVP local
 def search_web():
     """Realiza búsquedas web de información médica"""
     try:
-        current_user_id = get_jwt_identity()
+        # current_user_id = get_jwt_identity()  # Deshabilitado para MVP local
+        current_user_id = 'local-user'  # Valor fijo para pruebas locales
         client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
         
         # Rate limiting para búsquedas
