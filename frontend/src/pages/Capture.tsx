@@ -67,6 +67,7 @@ const Capture: React.FC = () => {
   // File handling
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   
   // Smart suggestions
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -508,6 +509,9 @@ const Capture: React.FC = () => {
     setCustomDate('');
   }, []);
 
+  // State for showing agent conversation
+  const [showAgentConversation, setShowAgentConversation] = useState(false);
+
   return (
     <div className="capture-page">
       <header className="capture-header">
@@ -536,47 +540,70 @@ const Capture: React.FC = () => {
               Describe los datos de salud de forma natural. Nuestra IA analizará y extraerá la información relevante.
             </p>
 
-            {/* Input buttons remain the same */}
+            {/* Input buttons con diseño mejorado */}
             <div className="input-types">
               <button 
-                className="type-button active"
+                className={`type-button ${captureData.inputType === 'text' ? 'active' : ''}`}
                 onClick={() => setCaptureData(prev => ({ ...prev, inputType: 'text' }))}
               >
-                ✏️ Texto
+                <span className="button-icon">✏️</span>
+                <span className="button-label">Texto</span>
               </button>
+              
               <button 
                 className="type-button"
                 onClick={() => imageInputRef.current?.click()}
               >
-                📷 Foto
+                <span className="button-icon">📷</span>
+                <span className="button-label">Cámara</span>
               </button>
+              
+              <button 
+                className="type-button"
+                onClick={() => galleryInputRef.current?.click()}
+              >
+                <span className="button-icon">🖼️</span>
+                <span className="button-label">Galería</span>
+              </button>
+              
               <button 
                 className={`type-button ${isRecording ? 'recording' : ''}`}
                 onClick={isRecording ? stopRecording : startRecording}
               >
-                {isRecording ? `🔴 ${recordingTime}s` : '🎤 Audio'}
+                <span className="button-icon">{isRecording ? '🔴' : '🎤'}</span>
+                <span className="button-label">{isRecording ? `${recordingTime}s` : 'Audio'}</span>
               </button>
+              
               <button 
                 className="type-button"
                 onClick={() => fileInputRef.current?.click()}
               >
-                📎 Archivo
+                <span className="button-icon">📎</span>
+                <span className="button-label">Archivo</span>
               </button>
             </div>
           </div>
 
-          <textarea
-            className="main-input"
-            value={captureData.input}
-            onChange={handleInputChange}
-            placeholder="Ejemplo: 'Mi bebé pesó 8.5kg hoy después del baño' o 'Tiene fiebre de 38.2°C desde ayer y está un poco irritable'"
-            rows={6}
-          />
+          {/* Main input area con diseño mejorado */}
+          <div className="input-area">
+            <textarea
+              className="main-input"
+              value={captureData.input}
+              onChange={handleInputChange}
+              placeholder="Ejemplo: 'Mi bebé pesó 8.5kg hoy después del baño' o 'Tiene fiebre de 38.2°C desde ayer y está un poco irritable'"
+              rows={6}
+            />
+            
+            {/* Character counter */}
+            <div className="input-footer">
+              <span className="character-count">{captureData.input.length} caracteres</span>
+            </div>
+          </div>
 
           {/* Smart Suggestions based on AI analysis */}
           {aiProcessingResult?.suggestions && aiProcessingResult.suggestions.length > 0 && (
-            <div className="suggestions">
-              <h4>💡 Sugerencias de la IA:</h4>
+            <div className="suggestions elegant">
+              <h4>💡 Sugerencias inteligentes</h4>
               <ul>
                 {aiProcessingResult.suggestions.map((suggestion, index) => (
                   <li key={index}>{suggestion}</li>
@@ -601,39 +628,58 @@ const Capture: React.FC = () => {
             onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
             style={{ display: 'none' }}
           />
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="image/*"
+            onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
+            style={{ display: 'none' }}
+          />
 
-          {/* Image Preview */}
+          {/* Image Preview con diseño mejorado */}
           {imagePreview && (
-            <div className="image-preview-container">
-              <h4>Vista previa de la imagen:</h4>
+            <div className="image-preview-container elegant">
+              <button 
+                className="remove-image"
+                onClick={() => {
+                  setImagePreview(null);
+                  setCaptureData(prev => ({ ...prev, input: '', file: undefined }));
+                }}
+              >
+                ✕
+              </button>
               <img src={imagePreview} alt="Vista previa" className="image-preview" />
             </div>
           )}
 
-          {/* Process Button */}
-          <div className="action-buttons">
+          {/* Process Button con diseño mejorado */}
+          <div className="action-buttons elegant">
             <button
-              className={`process-button ${captureData.input.trim() ? 'active' : 'disabled'}`}
+              className={`process-button ${captureData.input.trim() ? 'ready' : ''} ${isProcessing ? 'processing' : ''}`}
               onClick={processWithAI}
               disabled={!captureData.input.trim() || isProcessing}
             >
               {isProcessing ? (
-                <span className="processing">
+                <>
                   <span className="spinner"></span>
-                  Analizando con IA multi-agente...
-                </span>
+                  <span>Analizando con múltiples agentes...</span>
+                </>
               ) : (
-                '🧠 Procesar con IA'
+                <>
+                  <span className="button-icon">🧠</span>
+                  <span>Procesar con IA</span>
+                </>
               )}
             </button>
             
             {(captureData.input || imagePreview) && (
               <button
-                className="clear-button"
+                className="secondary-button"
                 onClick={clearForm}
                 type="button"
               >
-                🗑️ Limpiar
+                <span className="button-icon">🗑️</span>
+                <span>Limpiar</span>
               </button>
             )}
           </div>
@@ -652,49 +698,93 @@ const Capture: React.FC = () => {
           )}
         </section>
 
-        {/* Clarification Dialog */}
+        {/* Clarification Dialog mejorado */}
         {showClarificationDialog && aiProcessingResult && (
-          <div className="clarification-dialog">
-            <h3>🤔 Necesito aclarar algunos puntos</h3>
-            <p className="confidence-info">
-              Confianza actual: {Math.round(aiProcessingResult.confidence * 100)}%
-            </p>
-            
-            {aiProcessingResult.questions.map((question, index) => (
-              <div key={index} className="clarification-question">
-                <label>{question}</label>
-                <input
-                  type="text"
-                  value={userResponses[question] || ''}
-                  onChange={(e) => setUserResponses(prev => ({
-                    ...prev,
-                    [question]: e.target.value
-                  }))}
-                  placeholder="Tu respuesta..."
-                />
+          <div className="modal-overlay" onClick={() => setShowClarificationDialog(false)}>
+            <div className="clarification-dialog elegant" onClick={e => e.stopPropagation()}>
+              <div className="dialog-header">
+                <h3>🤔 Necesito aclarar algunos puntos</h3>
+                <button className="close-button" onClick={() => setShowClarificationDialog(false)}>✕</button>
               </div>
-            ))}
-            
-            <div className="clarification-actions">
-              <button onClick={() => setShowClarificationDialog(false)}>
-                Cancelar
-              </button>
-              <button onClick={handleClarificationSubmit} className="primary">
-                Continuar con estas respuestas
-              </button>
+              
+              <div className="confidence-bar">
+                <div className="confidence-fill" style={{ width: `${Math.round(aiProcessingResult.confidence * 100)}%` }}>
+                  <span className="confidence-text">{Math.round(aiProcessingResult.confidence * 100)}% confianza</span>
+                </div>
+              </div>
+              
+              <div className="questions-section">
+                {aiProcessingResult.questions.map((question, index) => (
+                  <div key={index} className="clarification-question">
+                    <label>{question}</label>
+                    <input
+                      type="text"
+                      value={userResponses[question] || ''}
+                      onChange={(e) => setUserResponses(prev => ({
+                        ...prev,
+                        [question]: e.target.value
+                      }))}
+                      placeholder="Tu respuesta..."
+                    />
+                  </div>
+                ))}
+              </div>
+              
+              <div className="clarification-actions">
+                <button className="secondary" onClick={() => setShowClarificationDialog(false)}>
+                  Cancelar
+                </button>
+                <button className="primary" onClick={handleClarificationSubmit}>
+                  Continuar con estas respuestas
+                </button>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Preview Section - remains mostly the same */}
+        {/* Preview Section mejorado */}
         {showPreview && extractedData && (
-          <section className="preview-section">
+          <section className="preview-section elegant">
             <div className="preview-header">
               <h3>Vista previa de datos extraídos</h3>
               <div className={`confidence-indicator ${extractedData.confidence > 0.7 ? 'high' : extractedData.confidence > 0.4 ? 'medium' : 'low'}`}>
-                Confianza: {Math.round(extractedData.confidence * 100)}%
+                <div className="confidence-circle">
+                  <span>{Math.round(extractedData.confidence * 100)}%</span>
+                </div>
+                <span className="confidence-label">Confianza</span>
               </div>
             </div>
+
+            {/* Botón para ver conversación entre agentes */}
+            {aiProcessingResult?.conversationLog && aiProcessingResult.conversationLog.length > 0 && (
+              <button 
+                className="show-conversation-button"
+                onClick={() => setShowAgentConversation(!showAgentConversation)}
+              >
+                <span className="button-icon">💬</span>
+                Ver análisis detallado de agentes
+              </button>
+            )}
+
+            {/* Conversación entre agentes */}
+            {showAgentConversation && aiProcessingResult?.conversationLog && (
+              <div className="agent-conversation">
+                <h4>🤖 Conversación entre agentes</h4>
+                <div className="conversation-log">
+                  {aiProcessingResult.conversationLog.map((msg, index) => (
+                    <div key={index} className="conversation-message">
+                      <div className="message-header">
+                        <span className="agent-name">{msg.from}</span>
+                        <span className="arrow">→</span>
+                        <span className="agent-name">{msg.to}</span>
+                      </div>
+                      <div className="message-content">{msg.message}</div>
+                      <div className="message-time">{new Date(msg.timestamp).toLocaleTimeString()}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* AI Agents Analysis Summary */}
             {aiProcessingResult && (
