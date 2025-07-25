@@ -4,12 +4,32 @@
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "worker",
+	"name": "maxi-worker",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-07-24",
 	"observability": {
 		"enabled": true
+	},
+
+	/**
+	 * KV Namespaces for rate limiting
+	 */
+	"kv_namespaces": [
+		{
+			"binding": "RATE_LIMIT_KV",
+			"id": "rate-limit-kv",
+			"preview_id": "rate-limit-kv-preview"
+		}
+	],
+
+	/**
+	 * Environment Variables
+	 * Note: Sensitive data like OPENAI_API_KEY should be set as secrets
+	 */
+	"vars": {
+		"ENVIRONMENT": "production"
 	}
+
 	/**
 	 * Smart Placement
 	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
@@ -21,16 +41,6 @@
 	 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
 	 * databases, object storage, AI inference, real-time communication and more.
 	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
-	 */
-
-	/**
-	 * Environment Variables
-	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-	 */
-	// "vars": { "MY_VARIABLE": "production_value" },
-	/**
-	 * Note: Use secrets to store sensitive data.
-	 * https://developers.cloudflare.com/workers/configuration/secrets/
 	 */
 
 	/**
