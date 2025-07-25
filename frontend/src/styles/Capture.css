@@ -510,6 +510,44 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* Date Field */
+.date-field {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--gray-50);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.date-field label {
+  margin: 0;
+  color: var(--gray-700);
+  font-size: 0.95rem;
+}
+
+.date-input {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--gray-300);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  color: var(--gray-800);
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.date-input:hover {
+  border-color: var(--primary-color);
+}
+
+.date-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
 /* Mobile Optimizations */
 @media (max-width: 768px) {
   .capture-content {

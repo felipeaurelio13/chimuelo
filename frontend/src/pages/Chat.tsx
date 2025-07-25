@@ -177,42 +177,30 @@ const Chat: React.FC = () => {
           id: `msg-${Date.now()}-assistant`,
           userId: user.id,
           role: 'assistant',
-          content: response.data.content,
-          context: {
-            relatedRecords: context ? Object.keys(context.medicalHistory).slice(0, 5) : [],
-            searchResults: response.data.searchResults || [],
-            confidence: response.data.confidence || 0.9
-          },
-          timestamp: new Date(),
-          tokens: response.data.tokens
+          content: response.data.response || response.data.content || 'Lo siento, no pude generar una respuesta.',
+          timestamp: new Date()
         };
 
-        // Update session with both messages
+        // Add assistant message to session
         const finalMessages = [...updatedMessages, assistantMessage];
         await updateChatSession(currentSession.id, { 
-          messages: finalMessages 
+          messages: finalMessages
         });
 
-        // Clear input
+        // Clear input and reset
         setInputData(prev => ({ ...prev, message: '' }));
-        setShowSuggestions(true);
-        
-        // Reset textarea height
-        if (inputRef.current) {
-          inputRef.current.style.height = 'auto';
-        }
+        setShowSuggestions(false);
       } else {
-        throw new Error(response.error || 'Error en la respuesta de IA');
+        throw new Error(response.error || 'No se pudo obtener respuesta del asistente');
       }
-
     } catch (error: any) {
       console.error('Chat error:', error);
-      setError(error.message || 'Error al enviar mensaje');
+      setError(error.message || 'Error al enviar el mensaje. Por favor intenta de nuevo.');
     } finally {
       setIsLoading(false);
       setIsTyping(false);
     }
-  }, [inputData, user, activeChatSession, isLoading, createChatSession, setActiveChatSession, updateChatSession, getSmartContext]);
+  }, [inputData, user, isLoading, activeChatSession, createChatSession, setActiveChatSession, updateChatSession, getSmartContext]);
 
   // Handle enter key
   const handleKeyPress = (e: React.KeyboardEvent) => {

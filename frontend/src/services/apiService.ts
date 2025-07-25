@@ -61,6 +61,33 @@ class APIService {
         timestamp: new Date().toISOString()
       };
 
+      // Detectar fecha en el texto
+      let detectedDate = new Date();
+      
+      // Patrones de fecha comunes
+      if (input.includes('ayer')) {
+        detectedDate.setDate(detectedDate.getDate() - 1);
+      } else if (input.includes('anteayer') || input.includes('antes de ayer')) {
+        detectedDate.setDate(detectedDate.getDate() - 2);
+      } else if (input.includes('hace una semana')) {
+        detectedDate.setDate(detectedDate.getDate() - 7);
+      } else if (input.includes('la semana pasada')) {
+        detectedDate.setDate(detectedDate.getDate() - 7);
+      } else if (input.includes('hace un mes')) {
+        detectedDate.setMonth(detectedDate.getMonth() - 1);
+      }
+      
+      // Buscar fechas explícitas (dd/mm/yyyy o dd-mm-yyyy)
+      const datePattern = /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/;
+      const dateMatch = input.match(datePattern);
+      if (dateMatch) {
+        const day = parseInt(dateMatch[1]);
+        const month = parseInt(dateMatch[2]) - 1; // Los meses en JS son 0-11
+        const year = parseInt(dateMatch[3]);
+        const fullYear = year < 100 ? 2000 + year : year;
+        detectedDate = new Date(fullYear, month, day);
+      }
+
       // Detectar peso
       const pesoMatch = input.match(/(\d+(?:[.,]\d+)?)\s*(?:kg|kilos?|kilogramos?)/i);
       if (pesoMatch) {
@@ -69,7 +96,7 @@ class APIService {
         extractedData.data = {
           value,
           unit: 'kg',
-          date: new Date().toISOString()
+          date: detectedDate.toISOString()
         };
         extractedData.confidence = 0.95;
         extractedData.notes = `Peso registrado: ${value} kg`;
@@ -84,7 +111,7 @@ class APIService {
         extractedData.data = {
           value: temp,
           unit: '°C',
-          date: new Date().toISOString()
+          date: detectedDate.toISOString()
         };
         extractedData.confidence = 0.9;
         extractedData.requiresAttention = temp >= 38;
@@ -101,7 +128,7 @@ class APIService {
         extractedData.data = {
           value,
           unit: 'cm',
-          date: new Date().toISOString()
+          date: detectedDate.toISOString()
         };
         extractedData.confidence = 0.92;
         extractedData.notes = `Talla registrada: ${value} cm`;
@@ -114,7 +141,7 @@ class APIService {
         extractedData.type = 'symptom';
         extractedData.data = {
           description: request.input,
-          date: new Date().toISOString()
+          date: detectedDate.toISOString()
         };
         extractedData.confidence = 0.8;
         extractedData.requiresAttention = true;
@@ -126,11 +153,14 @@ class APIService {
         extractedData.type = 'note';
         extractedData.data = {
           content: request.input,
-          date: new Date().toISOString()
+          date: detectedDate.toISOString()
         };
         extractedData.confidence = 0.7;
         extractedData.notes = 'Nota general registrada';
       }
+
+      // Actualizar timestamp con la fecha detectada
+      extractedData.timestamp = detectedDate.toISOString();
 
       // Guardar en historial
       this.saveToHistory(this.EXTRACTION_HISTORY_KEY, {

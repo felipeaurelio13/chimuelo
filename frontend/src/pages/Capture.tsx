@@ -48,6 +48,7 @@ const Capture: React.FC = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [processError, setProcessError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [customDate, setCustomDate] = useState<string>('');
   
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -275,6 +276,10 @@ const Capture: React.FC = () => {
         setShowPreview(true);
         setProcessError(null);
         
+        // Establecer la fecha personalizada con la fecha extraída o actual
+        const extractedDate = new Date(extractedDataWithTimestamp.data?.date || extractedDataWithTimestamp.timestamp);
+        setCustomDate(extractedDate.toISOString().split('T')[0]);
+        
         // Validate extracted data
         const validationResult = validateExtractedData(extractedDataWithTimestamp);
         setValidation(validationResult);
@@ -351,16 +356,24 @@ const Capture: React.FC = () => {
     if (!extractedData || !user) return;
     
     try {
+      // Usar la fecha personalizada si fue modificada
+      const finalTimestamp = customDate ? 
+        new Date(customDate + 'T' + new Date().toTimeString().split(' ')[0]) : 
+        new Date(extractedData.timestamp);
+      
       // Create health record using context
       const healthRecord = {
         userId: user.id,
         type: extractedData.type as any,
-        data: extractedData.data,
-        timestamp: new Date(extractedData.timestamp),
+        data: {
+          ...extractedData.data,
+          date: finalTimestamp.toISOString()
+        },
+        timestamp: finalTimestamp,
         confidence: extractedData.confidence,
         requiresAttention: extractedData.requiresAttention,
         notes: extractedData.notes,
-        tags: [], // TODO: Extract tags from AI or allow manual tagging
+        tags: [],
         metadata: {
           source: 'ai_extraction' as const,
           inputType: captureData.inputType,
@@ -368,7 +381,7 @@ const Capture: React.FC = () => {
           location: captureData.metadata?.location,
           context: captureData.metadata?.context
         },
-        encrypted: false // TODO: Implement encryption
+        encrypted: false
       };
 
       // Save using DataContext (automatically updates state)
@@ -431,6 +444,7 @@ const Capture: React.FC = () => {
     setValidation({ isValid: true, errors: [], warnings: [] });
     setProcessError(null);
     setImagePreview(null);
+    setCustomDate('');
   }, []);
 
   return (
@@ -646,6 +660,21 @@ const Capture: React.FC = () => {
                     {JSON.stringify(extractedData.data, null, 2)}
                   </pre>
                 )}
+              </div>
+
+              {/* Campo de fecha editable */}
+              <div className="date-field">
+                <label htmlFor="custom-date">
+                  <strong>Fecha del registro:</strong>
+                </label>
+                <input
+                  type="date"
+                  id="custom-date"
+                  value={customDate}
+                  onChange={(e) => setCustomDate(e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
+                  className="date-input"
+                />
               </div>
 
               {extractedData.notes && (
