@@ -53,12 +53,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         if (token && userData) {
           const user = JSON.parse(userData);
-          setState({
+          setState(prev => ({
+            ...prev,
             user,
             isLoading: false,
             error: null,
             isAuthenticated: true,
-          });
+          }));
         } else {
           setState(prev => ({
             ...prev,
@@ -70,12 +71,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Clear corrupted data
         localStorage.removeItem('maxi_auth_token');
         localStorage.removeItem('maxi_user_data');
-        setState({
+        setState(prev => ({
+          ...prev,
           user: null,
           isLoading: false,
           error: null,
           isAuthenticated: false,
-        });
+        }));
       }
     };
 
@@ -102,12 +104,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.setItem('maxi_auth_token', mockToken);
         localStorage.setItem('maxi_user_data', JSON.stringify(mockUser));
         
-        setState({
+        setState(prev => ({
+          ...prev,
           user: mockUser,
           isLoading: false,
           error: null,
           isAuthenticated: true,
-        });
+        }));
         
         return { success: true };
       } else {

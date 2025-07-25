@@ -49,6 +49,10 @@ class APIService {
     this.baseURL = import.meta.env.VITE_WORKER_URL || 'http://localhost:8787';
   }
 
+  private isDevelopment(): boolean {
+    return import.meta.env.DEV;
+  }
+
   private async makeRequest<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -111,11 +115,39 @@ class APIService {
 
   // Health check
   async healthCheck(): Promise<APIResponse> {
+    // In development mode, return mock data instead of trying to connect to Worker
+    if (this.isDevelopment() && !import.meta.env.VITE_WORKER_URL) {
+      return {
+        success: true,
+        data: {
+          status: 'ok (mock)',
+          timestamp: new Date().toISOString()
+        }
+      };
+    }
     return this.makeRequest('/health');
   }
 
   // OpenAI Extract data
   async extractData(request: ExtractionRequest): Promise<APIResponse> {
+    // In development mode, return mock extracted data
+    if (this.isDevelopment() && !import.meta.env.VITE_WORKER_URL) {
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
+      return {
+        success: true,
+        data: {
+          type: 'weight',
+          data: {
+            value: 4.2,
+            unit: 'kg',
+            date: new Date().toISOString()
+          },
+          confidence: 0.95,
+          requiresAttention: false,
+          notes: `Datos extraídos de: "${request.input}"`
+        }
+      };
+    }
     return this.makeRequest('/api/openai/extract', {
       method: 'POST',
       body: JSON.stringify(request),
@@ -124,6 +156,19 @@ class APIService {
 
   // OpenAI Chat
   async chatCompletion(request: ChatRequest): Promise<APIResponse> {
+    // In development mode, return mock chat response
+    if (this.isDevelopment() && !import.meta.env.VITE_WORKER_URL) {
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API delay
+      return {
+        success: true,
+        data: {
+          response: `Esta es una respuesta simulada para tu consulta. En producción, esto sería procesado por OpenAI GPT-4 con todo el contexto médico del bebé. Para activar la IA real, configura el Cloudflare Worker según las instrucciones del README.`,
+          usage: {
+            tokens: 150
+          }
+        }
+      };
+    }
     return this.makeRequest('/api/openai/chat', {
       method: 'POST',
       body: JSON.stringify(request),
@@ -135,6 +180,24 @@ class APIService {
     query: string,
     options: { limit?: number; context?: string; language?: string } = {}
   ): Promise<APIResponse> {
+    // In development mode, return mock search results
+    if (this.isDevelopment() && !import.meta.env.VITE_WORKER_URL) {
+      await new Promise(resolve => setTimeout(resolve, 800)); // Simulate API delay
+      return {
+        success: true,
+        data: {
+          results: [
+            {
+              title: `Información sobre: ${query}`,
+              snippet: `Esta es información simulada sobre "${query}". En producción se utilizaría DuckDuckGo API para obtener resultados reales.`,
+              url: 'https://example.com/mock-result'
+            }
+          ],
+          total: 1
+        }
+      };
+    }
+
     const params = new URLSearchParams({
       q: query,
       limit: (options.limit || 5).toString(),
