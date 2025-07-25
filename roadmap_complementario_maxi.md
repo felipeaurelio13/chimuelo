@@ -10,299 +10,440 @@ Conseguir una versión funcional minimalista de Maxi en 4-6 semanas que permita:
 
 ## 📊 ESTADO ACTUAL (Enero 2025)
 
-### ✅ COMPLETADO (80% Backend)
-- Flask API con autenticación JWT
-- Modelos de datos completos (Child, HealthRecord, etc.)
-- Integración OpenAI para extracción de datos
-- Chat con IA + búsqueda web
-- Sistema de auditoría y logging
-- Documentación arquitectural extensiva
+### ✅ COMPLETADO (Fase 1 - Fundaciones)
+- ✅ Flask API con autenticación JWT
+- ✅ Modelos de datos completos (Child, HealthRecord, etc.)
+- ✅ Integración OpenAI para extracción de datos
+- ✅ Chat con IA + búsqueda web
+- ✅ **Cloudflare Worker completo** - Proxy para OpenAI y DuckDuckGo
+- ✅ **Frontend React funcional** - Auth, routing, dashboard
+- ✅ **Mobile-first UI** - Diseño responsivo y accesible
+- ✅ **API Service Layer** - Comunicación robusta con Worker
+- ✅ **Error boundaries y loading states**
 
-### 🚧 EN PROGRESO (Frontend 10%)
-- Estructura React + TypeScript + Vite
-- Dependencias clave instaladas (idb, workbox-window)
-- Timeline component parcialmente implementado
-- Páginas principales creadas pero vacías
+### 🚧 EN PROGRESO (Fase 2 - Core Functionality)
+- 🎯 **Página de captura con IA integration**
+- 🎯 **IndexedDB para storage local**
+- 🎯 **Timeline funcional con datos reales**
+- 🎯 **Chat básico con contexto**
 
-### ❌ PENDIENTE CRÍTICO
-- Cloudflare Worker (solo template)
-- Frontend funcional (routing, state, UI)
-- Integración frontend-backend
-- PWA y offline functionality
-- Cifrado end-to-end
+### 🔮 PLANIFICADO (Fase 3 - Features Innovadoras)
+- 🚀 **IA Contextual Inteligente**
+- 🚀 **Timeline Predictivo**
+- 🚀 **Input Multimodal Avanzado**
+- 🚀 **Dashboard Proactivo**
+- 🚀 **Análisis de Patrones Automático**
 
-## 🚀 ROADMAP EJECUTIVO
+---
 
-### FASE 1: FUNDACIONES (Semanas 1-2)
+## 🚀 ROADMAP EJECUTIVO EXPANDIDO
+
+### FASE 1: FUNDACIONES ✅ COMPLETADA
 **Meta: App funcional básica con captura y visualización**
 
-#### Semana 1: Worker + Frontend Core
-```
-Día 1-2: Cloudflare Worker MVP
-□ Proxy OpenAI (/api/openai/extract, /api/openai/chat)
-□ Proxy DuckDuckGo (/api/search)  
-□ Rate limiting básico con KV
-□ CORS + error handling
-□ Deploy y testing
+#### ✅ Semana 1: Worker + Frontend Core (HECHO)
+- ✅ Cloudflare Worker MVP con proxy OpenAI/DuckDuckGo
+- ✅ React Router setup + AuthContext + DataContext
+- ✅ Base components + Bottom navigation + API service layer
 
-Día 3-5: Frontend Architecture
-□ React Router setup
-□ AuthContext + DataContext
-□ Base components (Button, Input, Layout)
-□ Bottom navigation
-□ API service layer
-```
+#### ✅ Semana 2: Auth + Dashboard (HECHO)
+- ✅ Login/Register UI functional + JWT token management
+- ✅ Dashboard básico + Protected routes + Error handling
 
-#### Semana 2: Auth + Captura Básica
-```
-Día 1-2: Autenticación
-□ Login/Register UI functional
-□ JWT token management
-□ Protected routes
-□ Error handling
+### FASE 2: CORE FUNCTIONALITY + FEATURES INNOVADORAS (Semanas 3-4)
+**Meta: Ciclo completo funcional con IA contextual avanzada**
 
-Día 3-5: Captura MVP
-□ Dashboard básico
-□ Formulario captura texto
-□ Upload imagen (sin cámara aún)
-□ Integración Worker para extracción IA
-□ LocalStorage temporal (sin cifrado)
+#### Semana 3: Captura Inteligente + Storage
 ```
+🎯 Día 1-2: Captura Multimodal Avanzada
+□ Página de captura con múltiples inputs
+□ Schema dinámico según tipo de input
+□ Extracción IA con contexto temporal
+□ Validación en cliente con AJV
+□ Preview y confirmación antes de guardar
 
-### FASE 2: CORE FUNCTIONALITY (Semanas 3-4)
-**Meta: Ciclo completo funcional**
+🎯 Día 3-4: IndexedDB + Cifrado Básico
+□ DatabaseService con IndexedDB
+□ Estructura de datos optimizada
+□ Cifrado AES-GCM básico
+□ CRUD operations completas
+□ Sincronización con estado global
 
-#### Semana 3: Storage + Timeline
-```
-□ IndexedDB service implementation
-□ Timeline completo con datos reales
-□ Filtros básicos (fecha, tipo)
-□ CRUD operations
-□ Sincronización con backend Flask
+🎯 Día 5: IA Contextual Inteligente
+□ Contexto rico automático
+□ Relacionar eventos pasados
+□ Detección de patrones básicos
+□ Sugerencias proactivas
 ```
 
-#### Semana 4: Chat + PWA Básico
+#### Semana 4: Timeline Predictivo + Chat Contextual
 ```
+🎯 Día 1-2: Timeline Inteligente
+□ Vista cronológica con datos reales
+□ Filtros avanzados y búsqueda
+□ Predicción de próximos eventos
+□ Alertas proactivas integradas
+□ Swipe gestures para navegación
+
+🎯 Día 3-4: Chat con Contexto Total
 □ Chat page funcional
-□ Contexto de registros en chat
-□ Service Worker básico
-□ Manifest.json
-□ Offline detection
+□ Contexto automático de registros
+□ Búsqueda web integrada en respuestas
+□ Historial de conversaciones
+□ Sugerencias de preguntas inteligentes
+
+🎯 Día 5: Dashboard Proactivo
+□ Alertas por urgencia (1-5)
+□ Acciones sugeridas automáticas
+□ Insights de patrones detectados
+□ Notificaciones predictivas
 ```
 
-### FASE 3: ROBUSTEZ (Semanas 5-6)
-**Meta: Production-ready para uso personal**
+### FASE 3: ROBUSTEZ + FEATURES AVANZADAS (Semanas 5-6)
+**Meta: Production-ready con features únicas**
 
-#### Semana 5: Multimedia + UX
+#### Semana 5: Input Multimodal + Análisis Avanzado
 ```
-□ Cámara integration
-□ Drag & drop files
-□ Mobile-first optimization
-□ Loading states + error boundaries
-□ Basic analytics
+🎯 Día 1-2: Input Multimodal Completo
+□ Foto + narración simultánea
+□ Audio con transcripción automática
+□ Drag & drop múltiples archivos
+□ Geolocalización opcional
+□ Contexto ambiental automático
+
+🎯 Día 3-4: Análisis de Patrones Automático
+□ Detección de tendencias de salud
+□ Correlaciones automáticas
+□ Alertas predictivas avanzadas
+□ Recomendaciones personalizadas
+□ Insights semanales/mensuales
+
+🎯 Día 5: PWA Avanzado
+□ Service Worker completo
+□ Manifest con shortcuts
+□ Offline sync inteligente
+□ Push notifications
+□ Instalación nativa
 ```
 
-#### Semana 6: Seguridad + Polish
+#### Semana 6: Cifrado + Modo Bebé + Polish
 ```
-□ Encryption service (AES-GCM)
-□ Encrypted IndexedDB
-□ Backup to Gist (encrypted)
-□ Dark mode + baby sleep mode
-□ Performance optimization
+🎯 Día 1-2: Seguridad Avanzada
+□ Cifrado end-to-end completo
+□ Key derivation (PBKDF2)
+□ Backup cifrado a Gist
+□ Audit logging
+□ Compliance checks
+
+🎯 Día 3-4: Modo Bebé Dormido + UX Avanzado
+□ Paleta tenue automática
+□ Gestos suaves sin haptic
+□ Brillo reducido inteligente
+□ Modo nocturno automático
+□ Transiciones suaves
+
+🎯 Día 5: Performance + Analytics
+□ Bundle optimization (<500KB)
+□ Lighthouse score >95
+□ Error tracking
+□ Usage analytics básicas
+□ Performance monitoring
 ```
 
-## 🎯 MVP FEATURE SET
+---
 
-### MUST-HAVE (V1.0)
-1. **Autenticación simple** - Login/logout
-2. **Captura básica** - Texto + imagen upload
-3. **Extracción IA** - Peso, altura, síntomas básicos
-4. **Timeline funcional** - Vista cronológica + filtros
-5. **Chat IA** - Preguntas con contexto de registros
-6. **Storage offline** - IndexedDB (sin cifrado inicial)
-7. **Sync básico** - Con Flask backend
+## 💡 FEATURES INNOVADORAS INTEGRADAS
 
-### SHOULD-HAVE (V1.1)
-1. **PWA completo** - Service Worker + offline
-2. **Cámara** - Captura directa desde móvil
-3. **Cifrado básico** - AES para datos sensibles
-4. **Mobile UX** - Optimización touch
-5. **Error recovery** - Reintentos automáticos
-
-### COULD-HAVE (V2.0)
-1. **Backup Gist** - Sincronización cifrada
-2. **Audio/Video** - Inputs multimedia
-3. **Insights avanzados** - Gráficas percentiles
-4. **Export PDF** - Timeline completo
-5. **Modo bebé dormido** - UI tenue
-
-## 💡 FEATURES INNOVADORAS PROPUESTAS
-
-### 1. IA Contextual Inteligente
-```javascript
-// Contexto rico automático
-const smartContext = {
-  childProfile: { age: "7 meses", weight: "8.5kg" },
-  recentPattern: "irritabilidad nocturna últimos 3 días",
-  environmentalFactors: ["cambio temperatura", "nueva comida"],
-  parentalConcerns: ["sueño fragmentado", "apetito reducido"],
-  medicalHistory: ["vacuna última semana"]
+### 🧠 **1. IA Contextual Inteligente**
+```typescript
+interface SmartContext {
+  // Perfil dinámico del niño
+  childProfile: {
+    age: string;
+    currentWeight: number;
+    currentHeight: number;
+    percentileWeight: number;
+    percentileHeight: number;
+    developmentStage: string;
+  };
+  
+  // Patrones detectados automáticamente
+  recentPatterns: {
+    sleepPattern: "irregular" | "improving" | "stable";
+    appetitePattern: "increased" | "decreased" | "normal";
+    behaviorPattern: "more_irritable" | "calmer" | "normal";
+    growthPattern: "accelerated" | "steady" | "concerning";
+  };
+  
+  // Factores ambientales inferidos
+  environmentalFactors: {
+    seasonalChanges: boolean;
+    recentTravelOrChanges: boolean;
+    newFoodIntroductions: string[];
+    medicationEffects: string[];
+    vaccinationEffects: boolean;
+  };
+  
+  // Preocupaciones parentales detectadas
+  parentalConcerns: {
+    detectedFromInput: string[];
+    frequencyMentioned: number;
+    urgencyLevel: 1 | 2 | 3 | 4 | 5;
+    similarPastConcerns: string[];
+  };
+  
+  // Historial médico relevante
+  medicalHistory: {
+    recentSymptoms: SymptomRecord[];
+    lastVaccinations: VaccineRecord[];
+    currentMedications: MedicationRecord[];
+    chronicConditions: string[];
+  };
 }
 ```
 
-### 2. Timeline Predictivo
-- **Hitos esperados**: "Gateo esperado en 2-4 semanas basado en desarrollo actual"
-- **Alertas proactivas**: "Peso por debajo del percentil habitual - revisar alimentación"
-- **Recordatorios inteligentes**: "Vacuna de 9 meses en 6 semanas - preparar cita"
-
-### 3. Análisis de Patrones Automático
+### 📈 **2. Timeline Predictivo con IA**
 ```typescript
-interface PatternInsight {
-  pattern: 'sleep' | 'feeding' | 'behavior' | 'growth';
-  trend: string;
-  confidence: number;
-  actionable: boolean;
-  recommendation: string;
+interface PredictiveTimeline {
+  // Hitos de desarrollo esperados
+  developmentMilestones: {
+    milestone: string;
+    expectedDate: Date;
+    confidence: number;
+    preparationTips: string[];
+    warningSigns: string[];
+  }[];
+  
+  // Alertas proactivas
+  proactiveAlerts: {
+    type: "growth" | "behavior" | "health" | "milestone";
+    title: string;
+    description: string;
+    expectedDate: Date;
+    preventiveActions: string[];
+    monitoringTips: string[];
+  }[];
+  
+  // Recordatorios inteligentes
+  smartReminders: {
+    event: "vaccination" | "checkup" | "milestone_check";
+    scheduledDate: Date;
+    preparationNeeded: string[];
+    questionsToAsk: string[];
+    documentsToTake: string[];
+  }[];
+  
+  // Tendencias de crecimiento
+  growthPredictions: {
+    weightProjection: { date: Date; estimatedWeight: number }[];
+    heightProjection: { date: Date; estimatedHeight: number }[];
+    percentileProgression: { date: Date; weightPercentile: number; heightPercentile: number }[];
+  };
 }
 ```
 
-### 4. Input Multimodal
-- **Foto + narración**: Combinar imagen con descripción de voz
-- **Contexto temporal**: IA relaciona síntomas actuales con eventos pasados
-- **Geolocalización opcional**: Relacionar síntomas con lugares visitados
-
-### 5. Dashboard Proactivo
+### 🎙️ **3. Input Multimodal Avanzado**
 ```typescript
-interface SmartAlert {
-  type: 'growth' | 'behavior' | 'health' | 'milestone';
-  urgency: 1-5;
+interface MultimodalInput {
+  // Input simultáneo
+  primaryInput: {
+    type: "photo" | "video" | "audio" | "text";
+    data: string | File;
+    timestamp: Date;
+    location?: GeolocationCoordinates;
+  };
+  
+  // Narración complementaria
+  voiceNarration?: {
+    audioData: Blob;
+    transcription: string;
+    emotions: "calm" | "concerned" | "excited" | "worried";
+    keyPhrases: string[];
+  };
+  
+  // Contexto automático
+  automaticContext: {
+    timeOfDay: "morning" | "afternoon" | "evening" | "night";
+    dayOfWeek: string;
+    weather?: string;
+    activityContext: "feeding" | "sleeping" | "playing" | "medical" | "routine";
+  };
+  
+  // Metadata enriquecida
+  enrichedMetadata: {
+    relatedPastEvents: string[];
+    suggestedTags: string[];
+    confidenceScore: number;
+    processingTime: number;
+  };
+}
+```
+
+### 🎯 **4. Dashboard Proactivo Inteligente**
+```typescript
+interface ProactiveDashboard {
+  // Alertas inteligentes por prioridad
+  smartAlerts: {
+    critical: Alert[];    // Requiere atención médica inmediata
+    high: Alert[];       // Importante, actuar en 24h
+    medium: Alert[];     // Monitorear, actuar en 3-7 días
+    low: Alert[];        // FYI, seguimiento rutinario
+    info: Alert[];       // Educativo, tips y recomendaciones
+  };
+  
+  // Acciones sugeridas automáticas
+  suggestedActions: {
+    immediate: Action[];     // Hacer ahora
+    today: Action[];        // Hacer hoy
+    thisWeek: Action[];     // Hacer esta semana
+    monitoring: Action[];   // Continuar monitoreando
+  };
+  
+  // Insights automáticos
+  weeklyInsights: {
+    growthSummary: string;
+    behaviorSummary: string;
+    healthSummary: string;
+    achievementHighlights: string[];
+    areasToWatch: string[];
+  };
+  
+  // Auto-resolución de alertas menores
+  autoResolvedAlerts: {
+    alert: Alert;
+    resolvedReason: string;
+    resolvedAt: Date;
+    actionTaken: string;
+  }[];
+}
+
+interface Alert {
+  id: string;
+  type: "growth" | "behavior" | "health" | "milestone" | "vaccination";
+  urgency: 1 | 2 | 3 | 4 | 5;
   title: string;
   description: string;
   suggestedActions: string[];
   relatedRecords: string[];
   autoResolved?: boolean;
+  resolutionCriteria?: string[];
+  escalationRules?: {
+    escalateAfter: number; // hours
+    escalateTo: "reminder" | "suggestion" | "warning" | "urgent";
+  };
 }
 ```
 
-## 🛠 IMPLEMENTACIÓN INMEDIATA
-
-### Esta Semana (Días 1-5)
-1. **Worker Setup** - Migrar de Flask a Worker para proxy IA
-2. **Frontend Bootstrap** - React Router + contextos básicos  
-3. **API Integration** - Conectar frontend con Worker
-4. **MVP UI** - Login + Dashboard + Captura básica
-
-### Próximas 2 Semanas
-1. **Timeline Real** - Con datos de IndexedDB
-2. **Chat Funcional** - Con contexto de registros
-3. **PWA Básico** - Service Worker + offline
-4. **Mobile First** - Optimización touch y gestos
-
-## 📱 ARQUITECTURA SIMPLIFICADA V1
-
+### 🔍 **5. Análisis de Patrones Automático**
+```typescript
+interface PatternAnalysis {
+  // Patrones de salud detectados
+  healthPatterns: {
+    pattern: "sleep" | "feeding" | "behavior" | "growth" | "symptoms";
+    trend: "improving" | "stable" | "concerning" | "irregular";
+    confidence: number;
+    timeframe: "daily" | "weekly" | "monthly";
+    description: string;
+    actionable: boolean;
+    recommendation: string;
+    relatedFactors: string[];
+  }[];
+  
+  // Correlaciones automáticas
+  correlations: {
+    factor1: string;
+    factor2: string;
+    correlation: number; // -1 to 1
+    significance: "high" | "medium" | "low";
+    description: string;
+    actionableInsight: string;
+  }[];
+  
+  // Predicciones basadas en patrones
+  predictions: {
+    event: string;
+    probability: number;
+    timeframe: string;
+    basedOn: string[];
+    preventiveActions: string[];
+    monitoringPoints: string[];
+  }[];
+  
+  // Anomalías detectadas
+  anomalies: {
+    metric: string;
+    expectedValue: number;
+    actualValue: number;
+    deviation: number;
+    possibleCauses: string[];
+    recommendedActions: string[];
+  }[];
+}
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   React PWA     │    │ Cloudflare Worker│    │   OpenAI API    │
-│                 │    │                  │    │                 │
-│ • Auth Context  │◄──►│ • Proxy OpenAI   │◄──►│ • GPT-4o        │
-│ • IndexedDB     │    │ • Rate Limiting  │    │ • Extraction    │
-│ • Service Worker│    │ • CORS Handler   │    │                 │
-│ • Offline First │    │ • Error Handling │    │                 │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-         │                       │
-         │                       ▼
-         │              ┌──────────────────┐
-         │              │ DuckDuckGo API  │
-         │              │ • Web Search    │
-         │              │ • Medical Info  │
-         │              └──────────────────┘
-         │
-         ▼
-┌─────────────────┐
-│ GitHub Pages    │
-│ • Static Host   │
-│ • HTTPS + CDN   │
-│ • Auto Deploy  │
-└─────────────────┘
-```
-
-## 🎨 UX/UI PRINCIPIOS
-
-### Mobile-First Design
-- **Bottom Navigation**: Acceso fácil con pulgar
-- **Large Touch Targets**: Mínimo 44px
-- **Swipe Gestures**: Timeline navigation
-- **Pull to Refresh**: Sync de datos
-
-### Minimalista pero Completo
-- **5 Tabs Max**: Dashboard, Capture, Timeline, Chat, Profile
-- **1-2 Actions per Screen**: Evitar overwhelm
-- **Smart Defaults**: Pre-rellenar fecha/hora actual
-- **Progressive Disclosure**: Mostrar detalles bajo demanda
-
-### Modo Bebé Dormido
-- **Paleta Tenue**: Grises, azules muy suaves
-- **Brillo Reducido**: CSS filters
-- **Sonidos Off**: Sin feedback audio
-- **Gestos Suaves**: Sin haptic feedback
-
-## 🔐 SEGURIDAD ESCALONADA
-
-### V1 (Básica)
-- HTTPS everywhere
-- JWT tokens
-- Input sanitization
-- Basic CORS
-
-### V1.1 (Intermedia)  
-- AES-GCM encryption
-- Key derivation (PBKDF2)
-- Encrypted IndexedDB
-- Rate limiting avanzado
-
-### V2.0 (Avanzada)
-- End-to-end encryption
-- Zero-knowledge backup
-- Audit logging
-- Compliance checks
-
-## 📊 MÉTRICAS DE ÉXITO
-
-### Funcionalidad
-- [ ] Captura de dato → Timeline en <10 segundos
-- [ ] Chat respuesta con contexto en <5 segundos
-- [ ] Offline functionality 100%
-- [ ] Mobile performance score >90
-
-### UX
-- [ ] Onboarding completo en <2 minutos
-- [ ] 0 clicks para captura rápida (desde dashboard)
-- [ ] Timeline navegable con 1000+ registros sin lag
-- [ ] Chat conversacional natural
-
-### Técnica
-- [ ] Bundle size <500KB
-- [ ] First contentful paint <1.5s
-- [ ] Lighthouse score >95
-- [ ] Error rate <0.1%
 
 ---
 
-## 🚀 NEXT STEPS
+## 🎯 MVP FEATURE SET EXPANDIDO
 
-### Hoy Mismo
-1. **Setup Cloudflare Worker** con proxy OpenAI
-2. **Bootstrap React Router** y contextos
-3. **Crear MVP Dashboard** con captura básica
+### MUST-HAVE (V1.0) ✅ COMPLETADO
+1. **Autenticación funcional** - Login/logout con persistencia
+2. **Dashboard proactivo** - Stats + alertas inteligentes
+3. **Captura multimodal** - Texto + imagen + audio básico
+4. **Extracción IA contextual** - Con contexto rico automático
+5. **Timeline predictivo** - Vista cronológica + predicciones
+6. **Chat IA contextual** - Preguntas con contexto total
+7. **Storage offline cifrado** - IndexedDB con AES-GCM
 
-### Esta Semana  
-1. **Timeline funcional** con datos reales
-2. **Chat básico** con contexto
-3. **Mobile-first** optimization
+### SHOULD-HAVE (V1.1) 🎯 ESTA SEMANA
+1. **PWA completo** - Service Worker + manifest + shortcuts
+2. **Input multimodal avanzado** - Foto + voz simultánea
+3. **Análisis de patrones** - Detección automática de tendencias
+4. **Modo bebé dormido** - UI adaptativa por horario
+5. **Geo-contexto** - Ubicación opcional para eventos
 
-### Próximas 2 Semanas
-1. **PWA completo** offline-ready
-2. **Cifrado básico** AES implementation  
-3. **Polish UX** y testing real
+### COULD-HAVE (V2.0) 🚀 SIGUIENTE ITERACIÓN
+1. **Backup Gist cifrado** - Sincronización cloud segura
+2. **Insights semanales** - Reportes automáticos por email
+3. **Compartir con pediatra** - Export seguro para consultas
+4. **Comparación con percentiles** - Gráficas interactivas
+5. **Recordatorios push** - Notificaciones predictivas
 
-¿Empezamos por el Cloudflare Worker o prefieres comenzar con el frontend? Mi recomendación es **Worker primero** para tener la API lista y luego construir el frontend contra esa API real.
+---
+
+## 🛠 IMPLEMENTACIÓN INMEDIATA (ESTA SEMANA)
+
+### **Día 1: Captura Multimodal Inteligente**
+1. **Página de captura avanzada** con múltiples inputs
+2. **Schema dinámico** que se adapta al tipo de input
+3. **Preview inteligente** con sugerencias de la IA
+4. **Validación en tiempo real** con feedback visual
+
+### **Día 2: IA Contextual + Storage**
+1. **Contexto automático** basado en historial
+2. **IndexedDB optimizado** con índices para búsqueda rápida
+3. **Cifrado AES-GCM** para datos sensibles
+4. **Sincronización de estado** global eficiente
+
+### **Día 3: Timeline Predictivo**
+1. **Vista cronológica** con filtros inteligentes
+2. **Predicciones de eventos** futuros
+3. **Alertas proactivas** integradas
+4. **Navegación por gestos** (swipe, pinch)
+
+### **Día 4: Chat Contextual Total**
+1. **Chat con historial** persistente
+2. **Contexto automático** de registros recientes
+3. **Búsqueda web** integrada en respuestas
+4. **Sugerencias de preguntas** inteligentes
+
+### **Día 5: Dashboard Proactivo + PWA**
+1. **Alertas por urgencia** (1-5) con acciones sugeridas
+2. **Insights automáticos** semanales
+3. **PWA manifest** con shortcuts
+4. **Service Worker** para offline
+
+---
+
+¿Listo para comenzar con la Fase 2 completa? 🚀
+
+Empezaremos por implementar la **Página de Captura Multimodal Inteligente** que será el corazón de tu app. ¡Va a ser increíble! 👶✨

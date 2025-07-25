@@ -1,9 +1,11 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { DataProvider } from './contexts/DataContext';
 import LoadingScreen from './components/LoadingScreen';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Capture from './pages/Capture';
 import Timeline from './pages/Timeline';
 import Chat from './pages/Chat';
 import Profile from './pages/Profile';
@@ -48,6 +50,14 @@ const AppRouter: React.FC = () => {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/capture" 
+          element={
+            <ProtectedRoute>
+              <Capture />
             </ProtectedRoute>
           } 
         />
@@ -171,9 +181,11 @@ const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <div className="app">
-          <AppRouter />
-        </div>
+        <DataProvider>
+          <div className="app">
+            <AppRouter />
+          </div>
+        </DataProvider>
       </AuthProvider>
     </ErrorBoundary>
   );
