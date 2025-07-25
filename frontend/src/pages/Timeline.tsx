@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { HealthRecord } from '../services/databaseService';
+import { type HealthRecord } from '../services/databaseService';
 import '../styles/Timeline.css';
 
 interface TimelineFilters {
@@ -39,9 +39,9 @@ const Timeline: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { 
-    state: { healthRecords, healthStats, insights, isLoading },
+    state: { healthRecords, healthStats, isLoading },
     refreshHealthRecords,
-    markInsightAsRead 
+    // markInsightAsRead 
   } = useData();
 
   // Local state
@@ -474,7 +474,7 @@ const Timeline: React.FC = () => {
           </div>
         ) : (
           <div className={`timeline-view ${viewMode}`}>
-            {timelineGroups.map((group, groupIndex) => (
+            {timelineGroups.map((group) => (
               <div key={group.date} className="timeline-group">
                 <div className="timeline-date">
                   <h3>{new Date(group.date).toLocaleDateString('es-ES', {
@@ -487,7 +487,7 @@ const Timeline: React.FC = () => {
                 </div>
 
                 <div className="timeline-records">
-                  {group.records.map((record, recordIndex) => (
+                  {group.records.map((record) => (
                     <div 
                       key={record.id}
                       className={`timeline-record ${getRecordColor(record)} ${selectedRecord?.id === record.id ? 'selected' : ''}`}

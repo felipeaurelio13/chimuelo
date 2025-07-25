@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/apiService';
-import { ChatMessage, ChatSession } from '../services/databaseService';
+import { type ChatMessage } from '../services/databaseService';
 import '../styles/Chat.css';
 
 interface ChatInputData {
@@ -22,7 +22,7 @@ const Chat: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { 
-    state: { chatSessions, activeChatSession, healthRecords, insights },
+    state: { chatSessions, activeChatSession },
     createChatSession,
     updateChatSession,
     setActiveChatSession,
@@ -302,7 +302,7 @@ const Chat: React.FC = () => {
             </div>
           ) : (
             <div className="messages-list">
-              {activeChatSession.messages.map((message, index) => (
+              {activeChatSession.messages.map((message) => (
                 <div key={message.id} className={`message ${message.role}`}>
                   <div className="message-content">
                     <div className="message-bubble">
@@ -376,7 +376,7 @@ const Chat: React.FC = () => {
           </div>
         )}
 
-        {showSuggestions && inputData.message.length === 0 && activeChatSession?.messages.length > 0 && (
+        {showSuggestions && inputData.message.length === 0 && activeChatSession && activeChatSession.messages.length > 0 && (
           <div className="quick-suggestions">
             {smartSuggestions.slice(6, 8).map((suggestion, index) => (
               <button

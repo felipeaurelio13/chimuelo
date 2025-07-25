@@ -154,13 +154,13 @@ const Profile: React.FC = () => {
     navigate('/login');
   };
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
+  // const formatFileSize = (bytes: number): string => {
+  //   if (bytes === 0) return '0 Bytes';
+  //   const k = 1024;
+  //   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  //   const i = Math.floor(Math.log(bytes) / Math.log(k));
+  //   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  // };
 
   return (
     <div className="profile-page">
@@ -368,7 +368,7 @@ const Profile: React.FC = () => {
                 {Object.entries(dbInfo.recordCounts).map(([store, count]) => (
                   <div key={store} className="info-item">
                     <span className="info-label">{store}:</span>
-                    <span className="info-value">{count} registros</span>
+                    <span className="info-value">{String(count)} registros</span>
                   </div>
                 ))}
               </div>

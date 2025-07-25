@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useReducer, useEffect, useCallback, ReactNode } from 'react';
-import databaseService, { HealthRecord, Insight, ChatSession, AppSettings } from '../services/databaseService';
+import React, { createContext, useContext, useReducer, useEffect, useCallback, type ReactNode } from 'react';
+import databaseService, { type HealthRecord, type Insight, type ChatSession, type AppSettings } from '../services/databaseService';
 import { useAuth } from './AuthContext';
 
 // Context interfaces
@@ -438,7 +438,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     if (!user) throw new Error('User not authenticated');
     
     const recentRecords = getRecentHealthRecords(30);
-    const settings = state.settings;
+    // const settings = state.settings;
     const urgentAlerts = getUnresolvedAlerts();
     
     // Build intelligent context

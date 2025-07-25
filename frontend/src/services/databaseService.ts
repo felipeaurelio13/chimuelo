@@ -1,4 +1,4 @@
-import { openDB, IDBPDatabase, IDBPTransaction } from 'idb';
+import { openDB, type IDBPDatabase } from 'idb';
 
 // Database configuration
 const DB_NAME = 'maxi-health-db';
@@ -36,7 +36,7 @@ export interface HealthRecord {
   tags: string[];
   metadata: {
     source: 'manual' | 'ai_extraction' | 'import';
-    inputType?: 'text' | 'image' | 'audio' | 'video';
+    inputType?: 'text' | 'image' | 'audio' | 'video' | 'pdf';
     originalInput?: string;
     location?: GeolocationCoordinates;
     context?: string;
@@ -139,7 +139,7 @@ class DatabaseService {
   private async init(): Promise<void> {
     try {
       this.db = await openDB(DB_NAME, DB_VERSION, {
-        upgrade(db, oldVersion, newVersion, transaction) {
+        upgrade(db, oldVersion, newVersion) {
           console.log(`Upgrading database from version ${oldVersion} to ${newVersion}`);
 
           // Users store
@@ -549,7 +549,7 @@ class DatabaseService {
     trendData: { date: string; count: number }[];
   }> {
     const db = await this.ensureReady();
-    const transaction = db.transaction([STORES.HEALTH_RECORDS, STORES.INSIGHTS], 'readonly');
+    db.transaction([STORES.HEALTH_RECORDS, STORES.INSIGHTS], 'readonly');
     
     // Get all health records
     const records = await this.getHealthRecords(userId);

@@ -399,7 +399,7 @@ export class SchemaService {
     return Object.keys(this.schemas);
   }
 
-  static getSchemaForInput(input: string, inputType: string): BaseSchema {
+  static getSchemaForInput(input: string, _inputType: string): BaseSchema {
     // Smart schema detection based on input content
     const inputLower = input.toLowerCase();
     

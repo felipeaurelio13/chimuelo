@@ -192,12 +192,12 @@ const Capture: React.FC = () => {
       // Get smart schema based on input content
       const schema = SchemaService.getSchemaForInput(captureData.input, captureData.inputType);
       
-      // Build enriched prompt with context
-      const prompt = SchemaService.buildExtractionPrompt(
-        captureData.input, 
-        captureData.inputType, 
-        schema
-      );
+              // Build enriched prompt with context
+        // const prompt = SchemaService.buildExtractionPrompt(
+        //   captureData.input, 
+        //   captureData.inputType, 
+        //   schema
+        // );
       
       const result = await apiService.extractData({
         input: captureData.input,

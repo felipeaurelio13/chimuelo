@@ -20,7 +20,7 @@ interface RecentRecord {
 }
 
 const Dashboard: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [recentRecords] = useState<RecentRecord[]>([
