@@ -88,13 +88,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
-      // For MVP, we'll use a simple mock authentication
-      // In production, this would call your Flask backend or Worker
-      if (email && password.length >= 6) {
+      // Validación de credenciales específicas
+      if (email === 'felipelorcac@gmail.com' && password === 'phil.13') {
         const mockUser: User = {
-          id: 'user-' + Date.now(),
+          id: 'user-felipe-' + Date.now(),
           email,
-          name: email.split('@')[0],
+          name: 'Felipe Lorca',
           createdAt: new Date().toISOString(),
         };
         
@@ -114,7 +113,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         return { success: true };
       } else {
-        throw new Error('Invalid credentials');
+        throw new Error('Credenciales inválidas. Por favor verifica tu email y contraseña.');
       }
     } catch (error: any) {
       const errorMessage = error.message || 'Login failed';

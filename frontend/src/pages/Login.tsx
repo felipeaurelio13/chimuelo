@@ -152,7 +152,7 @@ const Login: React.FC = () => {
 
         <div className="demo-info">
           <p className="demo-text">
-            <strong>Demo:</strong> Usa cualquier email y contraseña de 6+ caracteres
+            <strong>Demo:</strong> Usa email: felipelorcac@gmail.com y password: phil.13
           </p>
         </div>
       </div>

@@ -2,7 +2,7 @@
   "name": "Chimuelo - Salud Infantil Inteligente",
   "short_name": "Chimuelo",
   "description": "Plataforma inteligente de salud infantil con IA para el seguimiento completo del desarrollo de tu bebé",
-  "start_url": "/",
+  "start_url": "/chimuelo/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4F46E5",
@@ -10,16 +10,16 @@
   "categories": ["health", "family", "medical"],
   "lang": "es",
   "dir": "ltr",
-  "scope": "/",
+  "scope": "/chimuelo/",
   "icons": [
     {
-      "src": "/icon-192x192.png",
+      "src": "/chimuelo/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512x512.png", 
+      "src": "/chimuelo/icon-512x512.png", 
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -30,10 +30,10 @@
       "name": "Capturar Datos",
       "short_name": "Capturar",
       "description": "Registra datos de salud rápidamente",
-      "url": "/capture",
+      "url": "/chimuelo/capture",
       "icons": [
         {
-          "src": "/icon-192x192.png",
+          "src": "/chimuelo/icon-192x192.png",
           "sizes": "192x192"
         }
       ]
@@ -42,10 +42,10 @@
       "name": "Timeline",
       "short_name": "Timeline",
       "description": "Ver historial médico",
-      "url": "/timeline",
+      "url": "/chimuelo/timeline",
       "icons": [
         {
-          "src": "/icon-192x192.png",
+          "src": "/chimuelo/icon-192x192.png",
           "sizes": "192x192"
         }
       ]
@@ -54,10 +54,10 @@
       "name": "Chat IA",
       "short_name": "Chat",
       "description": "Consultar con asistente médico",
-      "url": "/chat",
+      "url": "/chimuelo/chat",
       "icons": [
         {
-          "src": "/icon-192x192.png",
+          "src": "/chimuelo/icon-192x192.png",
           "sizes": "192x192"
         }
       ]

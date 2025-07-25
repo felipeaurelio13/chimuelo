@@ -38,8 +38,11 @@ const AppRouter: React.FC = () => {
     return <LoadingScreen message="Inicializando Maxi..." />;
   }
 
+  // Determinar la base URL según el entorno
+  const basename = import.meta.env.MODE === 'production' ? '/chimuelo' : '/';
+
   return (
-    <Router>
+    <Router basename={basename}>
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<Login />} />
@@ -168,7 +171,8 @@ const App: React.FC = () => {
 
     // Register service worker for PWA functionality
     if ('serviceWorker' in navigator && import.meta.env.PROD) {
-      navigator.serviceWorker.register('/sw.js')
+      const swPath = import.meta.env.MODE === 'production' ? '/chimuelo/sw.js' : '/sw.js';
+      navigator.serviceWorker.register(swPath)
         .then((registration) => {
           console.log('SW registered: ', registration);
         })

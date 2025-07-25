@@ -18,7 +18,7 @@ interface CaptureData {
 }
 
 interface ExtractedData {
-  extractionType: string;
+  type: string;
   confidence: number;
   timestamp: string;
   data: any;
@@ -46,6 +46,7 @@ const Capture: React.FC = () => {
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [validation, setValidation] = useState<ValidationResult>({ isValid: true, errors: [], warnings: [] });
   const [showPreview, setShowPreview] = useState(false);
+  const [processError, setProcessError] = useState<string | null>(null);
   
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -187,6 +188,7 @@ const Capture: React.FC = () => {
     if (!captureData.input.trim()) return;
     
     setIsProcessing(true);
+    setProcessError(null);
     
     try {
       // Get smart schema based on input content
@@ -211,11 +213,16 @@ const Capture: React.FC = () => {
       });
       
       if (result.success && result.data) {
-        setExtractedData(result.data);
+        // Asegurar que siempre haya un timestamp
+        const extractedDataWithTimestamp = {
+          ...result.data,
+          timestamp: result.data.timestamp || new Date().toISOString()
+        };
+        setExtractedData(extractedDataWithTimestamp);
         setShowPreview(true);
         
         // Validate extracted data
-        const validationResult = validateExtractedData(result.data);
+        const validationResult = validateExtractedData(extractedDataWithTimestamp);
         setValidation(validationResult);
       } else {
         throw new Error(result.error || 'Error procesando con IA');
@@ -223,9 +230,11 @@ const Capture: React.FC = () => {
       
     } catch (error: any) {
       console.error('AI processing error:', error);
+      const errorMessage = error.message || 'Error procesando con IA. Por favor intenta de nuevo.';
+      setProcessError(errorMessage);
       setValidation({
         isValid: false,
-        errors: [error.message || 'Error procesando con IA'],
+        errors: [errorMessage],
         warnings: []
       });
     } finally {
@@ -248,14 +257,14 @@ const Capture: React.FC = () => {
     }
     
     // Type-specific validation
-    if (data.extractionType === 'weight' && data.data?.weight) {
-      if (data.data.weight < 1 || data.data.weight > 30) {
+    if (data.type === 'weight' && data.data?.value) {
+      if (data.data.value < 1 || data.data.value > 30) {
         warnings.push('Peso fuera del rango normal para bebés/niños.');
       }
     }
     
-    if (data.extractionType === 'temperature' && data.data?.temperature) {
-      if (data.data.temperature > 38) {
+    if (data.type === 'temperature' && data.data?.value) {
+      if (data.data.value > 38) {
         warnings.push('Temperatura alta detectada. Considera consultar al pediatra.');
       }
     }
@@ -280,7 +289,7 @@ const Capture: React.FC = () => {
       // Create health record using context
       const healthRecord = {
         userId: user.id,
-        type: extractedData.extractionType as any,
+        type: extractedData.type as any,
         data: extractedData.data,
         timestamp: new Date(extractedData.timestamp),
         confidence: extractedData.confidence,
@@ -306,8 +315,8 @@ const Capture: React.FC = () => {
         await createInsight({
           userId: user.id,
           type: 'alert',
-          title: `Atención requerida: ${extractedData.extractionType}`,
-          description: `Este registro de ${extractedData.extractionType} requiere atención médica según la IA.`,
+          title: `Atención requerida: ${extractedData.type}`,
+          description: `Este registro de ${extractedData.type} requiere atención médica según la IA.`,
           data: { relatedRecord: savedRecord.id },
           confidence: extractedData.confidence,
           urgency: 4, // High urgency for attention-required items
@@ -469,6 +478,13 @@ const Capture: React.FC = () => {
               )}
             </button>
           </div>
+
+          {/* Error Message */}
+          {processError && !showPreview && (
+            <div className="error-message" style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#fee', borderRadius: '8px', color: '#c00' }}>
+              ⚠️ {processError}
+            </div>
+          )}
         </section>
 
         {/* Preview Section */}
@@ -501,14 +517,39 @@ const Capture: React.FC = () => {
             {/* Extracted Data Display */}
             <div className="extracted-data">
               <div className="data-header">
-                <span className="data-type">{extractedData.extractionType}</span>
+                <span className="data-type">{extractedData.type}</span>
                 <span className="data-timestamp">
                   {new Date(extractedData.timestamp).toLocaleString()}
                 </span>
               </div>
 
               <div className="data-content">
-                {JSON.stringify(extractedData.data, null, 2)}
+                {extractedData.type === 'weight' && extractedData.data?.value && (
+                  <div className="data-field">
+                    <strong>Peso:</strong> {extractedData.data.value} {extractedData.data.unit || 'kg'}
+                  </div>
+                )}
+                {extractedData.type === 'temperature' && extractedData.data?.value && (
+                  <div className="data-field">
+                    <strong>Temperatura:</strong> {extractedData.data.value} {extractedData.data.unit || '°C'}
+                  </div>
+                )}
+                {extractedData.type === 'height' && extractedData.data?.value && (
+                  <div className="data-field">
+                    <strong>Talla:</strong> {extractedData.data.value} {extractedData.data.unit || 'cm'}
+                  </div>
+                )}
+                {extractedData.type === 'note' && extractedData.data?.content && (
+                  <div className="data-field">
+                    <strong>Nota:</strong> {extractedData.data.content}
+                  </div>
+                )}
+                {/* Mostrar datos sin formato específico */}
+                {!['weight', 'temperature', 'height', 'note'].includes(extractedData.type) && (
+                  <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                    {JSON.stringify(extractedData.data, null, 2)}
+                  </pre>
+                )}
               </div>
 
               {extractedData.notes && (

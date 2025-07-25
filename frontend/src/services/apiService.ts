@@ -133,19 +133,76 @@ class APIService {
     // In development mode, return mock extracted data
     if (this.isDevelopment() && !import.meta.env.VITE_WORKER_URL) {
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
+      
+      // Analizar el input para extraer datos simulados más realistas
+      const input = request.input.toLowerCase();
+      let extractedData: any = {
+        type: 'general',
+        data: {},
+        confidence: 0.85,
+        requiresAttention: false,
+        notes: '',
+        timestamp: new Date().toISOString()
+      };
+
+      // Detectar peso
+      const pesoMatch = input.match(/(\d+(?:\.\d+)?)\s*(?:kg|kilos?|kilogramos?)/i);
+      if (pesoMatch) {
+        extractedData.type = 'weight';
+        extractedData.data = {
+          value: parseFloat(pesoMatch[1]),
+          unit: 'kg',
+          date: new Date().toISOString()
+        };
+        extractedData.confidence = 0.95;
+        extractedData.notes = `Peso registrado: ${pesoMatch[1]} kg`;
+      }
+
+      // Detectar temperatura/fiebre
+      const tempMatch = input.match(/(\d+(?:\.\d+)?)\s*(?:°c|grados?|temperatura)/i) || 
+                       input.match(/fiebre\s*(?:de\s*)?(\d+(?:\.\d+)?)/i);
+      if (tempMatch) {
+        const temp = parseFloat(tempMatch[1]);
+        extractedData.type = 'temperature';
+        extractedData.data = {
+          value: temp,
+          unit: '°C',
+          date: new Date().toISOString()
+        };
+        extractedData.confidence = 0.9;
+        extractedData.requiresAttention = temp > 38;
+        extractedData.notes = temp > 38 ? 
+          'Temperatura elevada detectada. Considera consultar al pediatra.' : 
+          `Temperatura registrada: ${temp}°C`;
+      }
+
+      // Detectar talla/altura
+      const tallaMatch = input.match(/(\d+(?:\.\d+)?)\s*(?:cm|centímetros?|talla|altura)/i);
+      if (tallaMatch) {
+        extractedData.type = 'height';
+        extractedData.data = {
+          value: parseFloat(tallaMatch[1]),
+          unit: 'cm',
+          date: new Date().toISOString()
+        };
+        extractedData.confidence = 0.92;
+        extractedData.notes = `Talla registrada: ${tallaMatch[1]} cm`;
+      }
+
+      // Si no se detectó nada específico, devolver como nota general
+      if (extractedData.type === 'general') {
+        extractedData.type = 'note';
+        extractedData.data = {
+          content: request.input,
+          date: new Date().toISOString()
+        };
+        extractedData.confidence = 0.7;
+        extractedData.notes = 'Nota general registrada';
+      }
+
       return {
         success: true,
-        data: {
-          type: 'weight',
-          data: {
-            value: 4.2,
-            unit: 'kg',
-            date: new Date().toISOString()
-          },
-          confidence: 0.95,
-          requiresAttention: false,
-          notes: `Datos extraídos de: "${request.input}"`
-        }
+        data: extractedData
       };
     }
     return this.makeRequest('/api/openai/extract', {
