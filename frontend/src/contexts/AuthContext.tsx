@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { authService } from '../services/authService';
 
 // Types
 interface User {
@@ -48,36 +49,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const token = localStorage.getItem('maxi_auth_token');
-        const userData = localStorage.getItem('maxi_user_data');
+        console.log('AuthContext: Initializing auth state');
         
-        if (token && userData) {
-          const user = JSON.parse(userData);
-          setState(prev => ({
-            ...prev,
-            user,
+        const currentUser = authService.getCurrentUser();
+        const isAuthenticated = authService.isAuthenticated();
+        
+        if (currentUser && isAuthenticated) {
+          console.log('AuthContext: User found in session:', currentUser.email);
+          setState({
+            user: currentUser as User,
             isLoading: false,
             error: null,
             isAuthenticated: true,
-          }));
+          });
         } else {
-          setState(prev => ({
-            ...prev,
+          console.log('AuthContext: No active session found');
+          setState({
+            user: null,
             isLoading: false,
-          }));
+            error: null,
+            isAuthenticated: false,
+          });
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
-        // Clear corrupted data
-        localStorage.removeItem('maxi_auth_token');
-        localStorage.removeItem('maxi_user_data');
-        setState(prev => ({
-          ...prev,
+        console.error('AuthContext: Error initializing auth:', error);
+        setState({
           user: null,
           isLoading: false,
           error: null,
           isAuthenticated: false,
-        }));
+        });
       }
     };
 
@@ -85,49 +86,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    console.log('AuthContext: Iniciando proceso de login');
+    console.log('AuthContext: Login attempt for:', email);
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
-      // Limpiar espacios en blanco
-      const cleanEmail = email.trim().toLowerCase();
-      const cleanPassword = password.trim();
+      const result = await authService.login(email, password);
       
-      console.log('AuthContext: Validando credenciales para:', cleanEmail);
-      
-      // Validación de credenciales específicas
-      if (cleanEmail === 'felipelorcac@gmail.com' && cleanPassword === 'phil.13') {
-        console.log('AuthContext: Credenciales válidas, creando sesión');
-        
-        const mockUser: User = {
-          id: 'user-felipe-' + Date.now(),
-          email: cleanEmail,
-          name: 'Felipe Lorca',
-          createdAt: new Date().toISOString(),
-        };
-        
-        const mockToken = 'mock-jwt-token-' + Date.now();
-        
-        // Store in localStorage
-        localStorage.setItem('maxi_auth_token', mockToken);
-        localStorage.setItem('maxi_user_data', JSON.stringify(mockUser));
-        
-        setState(prev => ({
-          ...prev,
-          user: mockUser,
+      if (result.success && result.user) {
+        console.log('AuthContext: Login successful');
+        setState({
+          user: result.user as User,
           isLoading: false,
           error: null,
           isAuthenticated: true,
-        }));
-        
-        console.log('AuthContext: Login exitoso');
+        });
         return { success: true };
       } else {
-        console.log('AuthContext: Credenciales inválidas');
-        throw new Error('Credenciales inválidas. Por favor verifica tu email y contraseña.');
+        console.log('AuthContext: Login failed:', result.error);
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: result.error || 'Error al iniciar sesión',
+          isAuthenticated: false,
+        }));
+        return { success: false, error: result.error };
       }
     } catch (error: any) {
-      console.error('AuthContext: Error en login:', error);
+      console.error('AuthContext: Login exception:', error);
       const errorMessage = error.message || 'Error al iniciar sesión';
       setState(prev => ({
         ...prev,
@@ -143,38 +128,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
-      // For MVP, simple validation and mock registration
-      if (!userData.email || !userData.password || !userData.name) {
-        throw new Error('All fields are required');
+      const result = await authService.register(
+        userData.email,
+        userData.password,
+        userData.name
+      );
+      
+      if (result.success && result.user) {
+        setState({
+          user: result.user as User,
+          isLoading: false,
+          error: null,
+          isAuthenticated: true,
+        });
+        return { success: true };
+      } else {
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: result.error || 'Error al registrar',
+        }));
+        return { success: false, error: result.error };
       }
-      
-      if (userData.password.length < 6) {
-        throw new Error('Password must be at least 6 characters');
-      }
-      
-      const newUser: User = {
-        id: 'user-' + Date.now(),
-        email: userData.email,
-        name: userData.name,
-        createdAt: new Date().toISOString(),
-      };
-      
-      const mockToken = 'mock-jwt-token-' + Date.now();
-      
-      // Store in localStorage
-      localStorage.setItem('maxi_auth_token', mockToken);
-      localStorage.setItem('maxi_user_data', JSON.stringify(newUser));
-      
-      setState({
-        user: newUser,
-        isLoading: false,
-        error: null,
-        isAuthenticated: true,
-      });
-      
-      return { success: true };
     } catch (error: any) {
-      const errorMessage = error.message || 'Registration failed';
+      const errorMessage = error.message || 'Error al registrar';
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -186,10 +163,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async (): Promise<void> => {
     try {
-      // Clear localStorage
-      localStorage.removeItem('maxi_auth_token');
-      localStorage.removeItem('maxi_user_data');
-      
+      await authService.logout();
       setState({
         user: null,
         isLoading: false,
@@ -197,7 +171,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         isAuthenticated: false,
       });
     } catch (error) {
-      console.error('Error during logout:', error);
+      console.error('AuthContext: Error during logout:', error);
     }
   };
 
