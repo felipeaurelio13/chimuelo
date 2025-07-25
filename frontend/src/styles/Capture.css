@@ -224,26 +224,48 @@
 
 /* Action Buttons */
 .action-buttons {
-  margin-top: 1.5rem;
+  margin-top: 2rem;
   display: flex;
+  gap: 1rem;
   justify-content: center;
 }
 
 .process-button {
-  background: #4f46e5;
+  padding: 1rem 2rem;
+  background: var(--primary-color);
   color: white;
   border: none;
-  border-radius: 0.75rem;
-  padding: 1rem 2rem;
-  font-size: 1rem;
+  border-radius: 12px;
+  font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  min-width: 200px;
+  flex: 1;
+  max-width: 300px;
   justify-content: center;
+}
+
+.clear-button {
+  padding: 1rem 1.5rem;
+  background: var(--gray-200);
+  color: var(--gray-700);
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.clear-button:hover {
+  background: var(--gray-300);
+  transform: translateY(-2px);
 }
 
 .process-button.active:hover {
@@ -464,6 +486,28 @@
   background: #9ca3af;
   color: #6b7280;
   cursor: not-allowed;
+}
+
+/* Image Preview */
+.image-preview-container {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: var(--gray-50);
+  border-radius: 8px;
+  border: 1px solid var(--gray-200);
+}
+
+.image-preview-container h4 {
+  margin: 0 0 0.5rem 0;
+  color: var(--gray-700);
+  font-size: 0.9rem;
+}
+
+.image-preview {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Mobile Optimizations */

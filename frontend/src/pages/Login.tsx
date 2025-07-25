@@ -42,18 +42,33 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.email || !formData.password) {
+    // Validación básica
+    if (!formData.email) {
+      return;
+    }
+    
+    if (!formData.password) {
+      return;
+    }
+    
+    if (formData.password.length < 6) {
       return;
     }
 
     setIsLoading(true);
     
     try {
+      console.log('Intentando login con:', { email: formData.email });
       const result = await login(formData.email, formData.password);
       
       if (result.success) {
+        console.log('Login exitoso, redirigiendo...');
         navigate('/', { replace: true });
+      } else {
+        console.error('Login falló:', result.error);
       }
+    } catch (error) {
+      console.error('Error en login:', error);
     } finally {
       setIsLoading(false);
     }
@@ -121,7 +136,10 @@ const Login: React.FC = () => {
 
           {error && (
             <div className="error-message" role="alert">
-              {error}
+              <span>⚠️ {error}</span>
+              <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', opacity: 0.9 }}>
+                Credenciales correctas: felipelorcac@gmail.com / phil.13
+              </div>
             </div>
           )}
 

@@ -37,7 +37,7 @@ const Capture: React.FC = () => {
   const { createHealthRecord, createInsight } = useData();
   const navigate = useNavigate();
   
-  // Core state
+  // State
   const [captureData, setCaptureData] = useState<CaptureData>({
     input: '',
     inputType: 'text'
@@ -47,6 +47,7 @@ const Capture: React.FC = () => {
   const [validation, setValidation] = useState<ValidationResult>({ isValid: true, errors: [], warnings: [] });
   const [showPreview, setShowPreview] = useState(false);
   const [processError, setProcessError] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -98,39 +99,71 @@ const Capture: React.FC = () => {
   }, [captureData.input]);
 
   // Handle text input change
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
     setCaptureData(prev => ({
       ...prev,
-      input: e.target.value
+      input: value,
+      inputType: 'text',
+      file: undefined
     }));
-    setExtractedData(null);
-    setValidation({ isValid: true, errors: [], warnings: [] });
-  };
+    setImagePreview(null); // Limpiar preview de imagen
+  }, []);
 
   // Handle file upload
   const handleFileUpload = useCallback((file: File) => {
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
+    if (file.type.startsWith('image/')) {
+      // Para imágenes, crear preview y mantener referencia al archivo
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
       
       setCaptureData({
-        input: result,
-        inputType: file.type.startsWith('image/') ? 'image' : 
-                  file.type.startsWith('audio/') ? 'audio' :
-                  file.type.startsWith('video/') ? 'video' :
-                  file.type === 'application/pdf' ? 'pdf' : 'text',
+        input: `[Imagen adjunta: ${file.name}]`,
+        inputType: 'image',
         file,
         metadata: {
           timestamp: new Date(),
-          context: `Archivo: ${file.name}`
+          context: `Imagen: ${file.name}`
         }
       });
-    };
-
-    if (file.type.startsWith('image/')) {
-      reader.readAsDataURL(file);
+    } else if (file.type === 'application/pdf') {
+      setCaptureData({
+        input: `[PDF adjunto: ${file.name}]`,
+        inputType: 'pdf',
+        file,
+        metadata: {
+          timestamp: new Date(),
+          context: `PDF: ${file.name}`
+        }
+      });
+    } else if (file.type.startsWith('audio/')) {
+      setCaptureData({
+        input: `[Audio adjunto: ${file.name}]`,
+        inputType: 'audio',
+        file,
+        metadata: {
+          timestamp: new Date(),
+          context: `Audio: ${file.name}`
+        }
+      });
     } else {
+      // Para archivos de texto, leer el contenido
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        setCaptureData({
+          input: content,
+          inputType: 'text',
+          file,
+          metadata: {
+            timestamp: new Date(),
+            context: `Archivo: ${file.name}`
+          }
+        });
+      };
       reader.readAsText(file);
     }
   }, []);
@@ -185,22 +218,40 @@ const Capture: React.FC = () => {
 
   // Process with AI
   const processWithAI = useCallback(async () => {
-    if (!captureData.input.trim()) return;
+    if (!captureData.input.trim()) {
+      setProcessError('Por favor ingresa algún texto o adjunta un archivo');
+      return;
+    }
     
     setIsProcessing(true);
     setProcessError(null);
+    setShowPreview(false);
     
     try {
+      console.log('Iniciando procesamiento con IA:', {
+        input: captureData.input.substring(0, 100),
+        inputType: captureData.inputType
+      });
+
+      // Validar que tenemos el servicio de esquemas
+      if (!SchemaService || typeof SchemaService.getSchemaForInput !== 'function') {
+        throw new Error('Error de configuración: Servicio de esquemas no disponible');
+      }
+
       // Get smart schema based on input content
       const schema = SchemaService.getSchemaForInput(captureData.input, captureData.inputType);
       
-              // Build enriched prompt with context
-        // const prompt = SchemaService.buildExtractionPrompt(
-        //   captureData.input, 
-        //   captureData.inputType, 
-        //   schema
-        // );
+      if (!schema) {
+        throw new Error('No se pudo determinar el esquema para procesar los datos');
+      }
+
+      console.log('Esquema seleccionado:', schema);
       
+      // Validar que tenemos el servicio de API
+      if (!apiService || typeof apiService.extractData !== 'function') {
+        throw new Error('Error de configuración: Servicio de API no disponible');
+      }
+
       const result = await apiService.extractData({
         input: captureData.input,
         inputType: captureData.inputType,
@@ -212,6 +263,8 @@ const Capture: React.FC = () => {
         }
       });
       
+      console.log('Resultado del procesamiento:', result);
+      
       if (result.success && result.data) {
         // Asegurar que siempre haya un timestamp
         const extractedDataWithTimestamp = {
@@ -220,17 +273,29 @@ const Capture: React.FC = () => {
         };
         setExtractedData(extractedDataWithTimestamp);
         setShowPreview(true);
+        setProcessError(null);
         
         // Validate extracted data
         const validationResult = validateExtractedData(extractedDataWithTimestamp);
         setValidation(validationResult);
       } else {
-        throw new Error(result.error || 'Error procesando con IA');
+        const errorMsg = result.error || 'No se pudo procesar la información';
+        console.error('Error en el resultado:', errorMsg);
+        throw new Error(errorMsg);
       }
       
     } catch (error: any) {
-      console.error('AI processing error:', error);
-      const errorMessage = error.message || 'Error procesando con IA. Por favor intenta de nuevo.';
+      console.error('Error procesando con IA:', error);
+      let errorMessage = 'Error desconocido al procesar';
+      
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.name === 'NetworkError' || error.name === 'TypeError') {
+        errorMessage = 'Error de conexión. Por favor verifica tu conexión a internet';
+      } else if (error.name === 'TimeoutError') {
+        errorMessage = 'El procesamiento tardó demasiado. Por favor intenta de nuevo';
+      }
+      
       setProcessError(errorMessage);
       setValidation({
         isValid: false,
@@ -355,6 +420,19 @@ const Capture: React.FC = () => {
     }));
   };
 
+  // Clear form
+  const clearForm = useCallback(() => {
+    setCaptureData({
+      input: '',
+      inputType: 'text'
+    });
+    setExtractedData(null);
+    setShowPreview(false);
+    setValidation({ isValid: true, errors: [], warnings: [] });
+    setProcessError(null);
+    setImagePreview(null);
+  }, []);
+
   return (
     <div className="capture-page">
       <header className="capture-header">
@@ -461,6 +539,14 @@ const Capture: React.FC = () => {
             style={{ display: 'none' }}
           />
 
+          {/* Image Preview */}
+          {imagePreview && (
+            <div className="image-preview-container">
+              <h4>Vista previa de la imagen:</h4>
+              <img src={imagePreview} alt="Vista previa" className="image-preview" />
+            </div>
+          )}
+
           {/* Process Button */}
           <div className="action-buttons">
             <button
@@ -477,6 +563,16 @@ const Capture: React.FC = () => {
                 '🧠 Procesar con IA'
               )}
             </button>
+            
+            {(captureData.input || imagePreview) && (
+              <button
+                className="clear-button"
+                onClick={clearForm}
+                type="button"
+              >
+                🗑️ Limpiar
+              </button>
+            )}
           </div>
 
           {/* Error Message */}

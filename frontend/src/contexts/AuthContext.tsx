@@ -85,14 +85,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    console.log('AuthContext: Iniciando proceso de login');
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
+      // Limpiar espacios en blanco
+      const cleanEmail = email.trim().toLowerCase();
+      const cleanPassword = password.trim();
+      
+      console.log('AuthContext: Validando credenciales para:', cleanEmail);
+      
       // Validación de credenciales específicas
-      if (email === 'felipelorcac@gmail.com' && password === 'phil.13') {
+      if (cleanEmail === 'felipelorcac@gmail.com' && cleanPassword === 'phil.13') {
+        console.log('AuthContext: Credenciales válidas, creando sesión');
+        
         const mockUser: User = {
           id: 'user-felipe-' + Date.now(),
-          email,
+          email: cleanEmail,
           name: 'Felipe Lorca',
           createdAt: new Date().toISOString(),
         };
@@ -111,16 +120,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           isAuthenticated: true,
         }));
         
+        console.log('AuthContext: Login exitoso');
         return { success: true };
       } else {
+        console.log('AuthContext: Credenciales inválidas');
         throw new Error('Credenciales inválidas. Por favor verifica tu email y contraseña.');
       }
     } catch (error: any) {
-      const errorMessage = error.message || 'Login failed';
+      console.error('AuthContext: Error en login:', error);
+      const errorMessage = error.message || 'Error al iniciar sesión';
       setState(prev => ({
         ...prev,
         isLoading: false,
         error: errorMessage,
+        isAuthenticated: false,
       }));
       return { success: false, error: errorMessage };
     }
