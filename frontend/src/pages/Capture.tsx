@@ -5,7 +5,7 @@ import { useData } from '../contexts/DataContext';
 import apiService from '../services/apiService';
 import SchemaService from '../services/schemas';
 import { contextAwareAI } from '../services/aiCoordinator';
-import { saveHealthRecord } from '../services/databaseService';
+import { type HealthRecord } from '../services/databaseService';
 import '../styles/Capture.css';
 
 interface CaptureData {
@@ -277,7 +277,7 @@ const Capture: React.FC = () => {
         
         // Inicializar respuestas vacías para las preguntas
         const initialResponses: {[key: string]: string} = {};
-        result.questions.forEach(q => {
+        result.questions.forEach((q: string) => {
           initialResponses[q] = '';
         });
         setUserResponses(initialResponses);
@@ -347,7 +347,7 @@ const Capture: React.FC = () => {
     // Agregar sugerencias si las hay
     if (result.suggestions.length > 0) {
       notes.push('\nSugerencias:');
-      result.suggestions.forEach(s => notes.push(`• ${s}`));
+      result.suggestions.forEach((s: string) => notes.push(`• ${s}`));
     }
     
     // Agregar etiquetas automáticas
@@ -613,7 +613,7 @@ const Capture: React.FC = () => {
             <div className="suggestions elegant">
               <h4>💡 Sugerencias inteligentes</h4>
               <ul>
-                {aiProcessingResult.suggestions.map((suggestion, index) => (
+                {aiProcessingResult.suggestions.map((suggestion: string, index: number) => (
                   <li key={index}>{suggestion}</li>
                 ))}
               </ul>
@@ -722,7 +722,7 @@ const Capture: React.FC = () => {
               </div>
               
               <div className="questions-section">
-                {aiProcessingResult.questions.map((question, index) => (
+                {aiProcessingResult.questions.map((question: string, index: number) => (
                   <div key={index} className="clarification-question">
                     <label>{question}</label>
                     <input
@@ -779,7 +779,7 @@ const Capture: React.FC = () => {
               <div className="agent-conversation">
                 <h4>🤖 Conversación entre agentes</h4>
                 <div className="conversation-log">
-                  {aiProcessingResult.conversationLog.map((msg, index) => (
+                  {aiProcessingResult.conversationLog.map((msg: any, index: number) => (
                     <div key={index} className="conversation-message">
                       <div className="message-header">
                         <span className="agent-name">{msg.from}</span>
@@ -799,7 +799,7 @@ const Capture: React.FC = () => {
               <div className="ai-analysis-summary">
                 <h4>🤖 Análisis Multi-Agente</h4>
                 <div className="agents-grid">
-                  {aiProcessingResult.agentResponses.map((agent, index) => (
+                  {aiProcessingResult.agentResponses.map((agent: any, index: number) => (
                     <div key={index} className="agent-card">
                       <div className="agent-header">
                         <span className="agent-name">{agent.agentName}</span>

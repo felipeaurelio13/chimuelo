@@ -537,8 +537,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     dispatch({ type: 'SET_HEALTH_RECORDS', payload: [] });
     dispatch({ type: 'SET_INSIGHTS', payload: [] });
     dispatch({ type: 'SET_CHAT_SESSIONS', payload: [] });
-    dispatch({ type: 'SET_SETTINGS', payload: null });
-    dispatch({ type: 'SET_HEALTH_STATS', payload: null });
+    dispatch({ type: 'RESET_DATA' });
   }, [dispatch]);
 
   // Auto-refresh data when user changes or on mount
