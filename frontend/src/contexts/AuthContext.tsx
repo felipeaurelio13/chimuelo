@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, type ReactNode, useCallback } from 'react';
 import { authService } from '../services/authService';
 
 // Types
@@ -40,45 +40,37 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [state, setState] = useState<AuthState>({
     user: null,
-    isLoading: true,
+    isLoading: true, // Initially true to indicate auth state is being determined
     error: null,
     isAuthenticated: false,
   });
 
-  // Initialize auth state from localStorage
+  // Initialize auth state from session storage
   useEffect(() => {
     const initializeAuth = async () => {
-      try {
-        console.log('AuthContext: Initializing auth state');
-        
-        const currentUser = authService.getCurrentUser();
-        const isAuthenticated = authService.isAuthenticated();
-        
-        if (currentUser && isAuthenticated) {
-          console.log('AuthContext: User found in session:', currentUser.email);
-          setState({
-            user: currentUser as User,
-            isLoading: false,
-            error: null,
-            isAuthenticated: true,
-          });
-        } else {
-          console.log('AuthContext: No active session found');
-          setState({
-            user: null,
-            isLoading: false,
-            error: null,
-            isAuthenticated: false,
-          });
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('AuthContext: Initializing auth state...');
+      }
+      const user = authService.getCurrentUser();
+      if (user) {
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.log('AuthContext: User found in session:', user.email);
         }
-      } catch (error) {
-        console.error('AuthContext: Error initializing auth:', error);
         setState({
-          user: null,
+          user,
           isLoading: false,
           error: null,
-          isAuthenticated: false,
+          isAuthenticated: true,
         });
+      } else {
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.log('AuthContext: No user found in session.');
+        }
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          isAuthenticated: false,
+        }));
       }
     };
 
@@ -86,14 +78,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    console.log('AuthContext: Login attempt for:', email);
     setState(prev => ({ ...prev, isLoading: true, error: null }));
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('AuthContext: Login attempt for:', email);
+    }
     
     try {
       const result = await authService.login(email, password);
       
       if (result.success && result.user) {
-        console.log('AuthContext: Login successful');
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.log('AuthContext: Login successful');
+        }
         setState({
           user: result.user as User,
           isLoading: false,
@@ -102,7 +98,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         });
         return { success: true };
       } else {
-        console.log('AuthContext: Login failed:', result.error);
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.error('AuthContext: Login failed:', result.error);
+        }
         setState(prev => ({
           ...prev,
           isLoading: false,
@@ -113,6 +111,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     } catch (error: any) {
       console.error('AuthContext: Login exception:', error);
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.error('AuthContext: Login exception (detailed):', error.message);
+      }
       const errorMessage = error.message || 'Error al iniciar sesión';
       setState(prev => ({
         ...prev,
@@ -126,6 +127,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (userData: RegisterData): Promise<{ success: boolean; error?: string }> => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('AuthContext: Register attempt for:', userData.email);
+    }
     
     try {
       const result = await authService.register(
@@ -135,6 +139,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       );
       
       if (result.success && result.user) {
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.log('AuthContext: Registration successful');
+        }
         setState({
           user: result.user as User,
           isLoading: false,
@@ -143,6 +150,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         });
         return { success: true };
       } else {
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.error('AuthContext: Registration failed:', result.error);
+        }
         setState(prev => ({
           ...prev,
           isLoading: false,
@@ -152,6 +162,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     } catch (error: any) {
       const errorMessage = error.message || 'Error al registrar';
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.error('AuthContext: Registration exception (detailed):', error.message);
+      }
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -162,22 +175,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async (): Promise<void> => {
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('AuthContext: Logout initiated.');
+    }
     try {
       await authService.logout();
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('AuthContext: Logout successful.');
+      }
       setState({
         user: null,
         isLoading: false,
         error: null,
         isAuthenticated: false,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('AuthContext: Error during logout:', error);
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        if (error instanceof Error) {
+          console.error('AuthContext: Logout exception (detailed):', error.message);
+        } else {
+          console.error('AuthContext: Logout exception (detailed):', error);
+        }
+      }
     }
   };
 
-  const clearError = (): void => {
+  const clearError = useCallback((): void => {
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('AuthContext: Clearing error.');
+    }
     setState(prev => ({ ...prev, error: null }));
-  };
+  }, []);
 
   const value: AuthContextType = {
     ...state,

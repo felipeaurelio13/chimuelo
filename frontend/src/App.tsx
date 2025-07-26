@@ -3,12 +3,12 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { Login } from './pages/Login';
-import { Dashboard } from './pages/Dashboard';
-import { Capture } from './pages/Capture';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Capture from './pages/Capture';
 import { Timeline } from './pages/Timeline';
-import { Chat } from './pages/Chat';
-import { Settings } from './pages/Settings';
+import Chat from './pages/Chat';
+import Settings from './pages/Settings';
 import './App.css';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {

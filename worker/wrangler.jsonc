@@ -10,16 +10,8 @@
 	"observability": {
 		"enabled": true
 	},
-
-	/**
-	 * KV Namespaces for rate limiting
-	 */
-	"kv_namespaces": [
-		{
-			"binding": "RATE_LIMIT_KV",
-			"id": "rate-limit-kv",
-			"preview_id": "rate-limit-kv-preview"
-		}
+	"compatibility_flags": [
+		"nodejs_compat"
 	],
 
 	/**

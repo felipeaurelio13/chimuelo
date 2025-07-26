@@ -37,6 +37,9 @@ interface ValidationResult {
 }
 
 const Capture: React.FC = () => {
+  if (import.meta.env.VITE_DEV === 'TRUE') {
+    console.log('Capture component rendered.');
+  }
   const { user } = useAuth();
   const { createHealthRecord, createInsight } = useData();
   const navigate = useNavigate();
@@ -74,228 +77,107 @@ const Capture: React.FC = () => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [detectedType, setDetectedType] = useState<string>('note');
 
-  // Update suggestions based on input
-  useEffect(() => {
-    if (captureData.input.length > 10) {
-      const inputLower = captureData.input.toLowerCase();
-      const newSuggestions: string[] = [];
-      
-      // Smart suggestions based on content
-      if (inputLower.includes('peso')) {
-        newSuggestions.push('¿Incluir condiciones de la medición? (con ropa, sin ropa, etc.)');
-        newSuggestions.push('¿Quién realizó la medición?');
-      }
-      
-      if (inputLower.includes('fiebre') || inputLower.includes('temperatura')) {
-        newSuggestions.push('¿Cómo se midió la temperatura? (oral, axilar, etc.)');
-        newSuggestions.push('¿Qué síntomas acompañan la fiebre?');
-      }
-      
-      if (inputLower.includes('síntoma') || inputLower.includes('dolor')) {
-        newSuggestions.push('¿Cuándo comenzaron los síntomas?');
-        newSuggestions.push('¿Qué tan severos son? (leve, moderado, severo)');
-      }
-      
-      setSuggestions(newSuggestions);
-      
-      // Detect probable type
-      const schema = SchemaService.getSchemaForInput(captureData.input, captureData.inputType);
-      const detectedExtractionType = schema.properties.extractionType?.const || 
-                                   schema.properties.extractionType?.enum?.[0] || 'note';
-      setDetectedType(detectedExtractionType);
-    } else {
-      setSuggestions([]);
-      setDetectedType('note');
+  // Generar notas inteligentes basadas en el análisis
+  const generateNotes = (result: any): string => {
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Capture: Generating notes from AI result.');
     }
-  }, [captureData.input]);
-
-  // Handle text input change
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    setCaptureData(prev => ({
-      ...prev,
-      input: value,
-      inputType: 'text',
-      file: undefined
-    }));
-    setImagePreview(null); // Limpiar preview de imagen
-  }, []);
-
-  // Handle file upload
-  const handleFileUpload = useCallback((file: File) => {
-    console.log('Archivo cargado:', file.name, file.type);
+    const notes: string[] = [];
+    const { finalData } = result;
     
-    if (file.type.startsWith('image/')) {
-      // Para imágenes, crear preview y placeholder
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-      
-      setCaptureData({
-        input: `[Imagen adjunta: ${file.name}] Por favor describe el contenido de esta imagen médica.`,
-        inputType: 'image',
-        file,
-        metadata: {
-          timestamp: new Date(),
-          context: `Imagen: ${file.name}`,
-          fileType: 'image',
-          fileName: file.name
-        }
-      });
-    } else if (file.type === 'application/pdf') {
-      // Para PDFs, indicar que es un documento
-      setCaptureData({
-        input: `[PDF adjunto: ${file.name}] Por favor describe el contenido de este documento médico.`,
-        inputType: 'pdf',
-        file,
-        metadata: {
-          timestamp: new Date(),
-          context: `PDF: ${file.name}`,
-          fileType: 'pdf',
-          fileName: file.name
-        }
-      });
-      
-      // Mostrar mensaje informativo
-      setProcessError('ℹ️ PDF detectado. Por favor describe brevemente qué tipo de documento es (ej: "análisis de sangre", "receta médica", etc.)');
-    } else if (file.type.startsWith('audio/')) {
-      // Para audio
-      setCaptureData({
-        input: `[Audio adjunto: ${file.name}]`,
-        inputType: 'audio',
-        file,
-        metadata: {
-          timestamp: new Date(),
-          context: `Audio: ${file.name}`,
-          fileType: 'audio',
-          fileName: file.name
-        }
-      });
-    } else {
-      // Para archivos de texto, leer el contenido
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result as string;
-        setCaptureData({
-          input: content,
-          inputType: 'text',
-          file,
-          metadata: {
-            timestamp: new Date(),
-            context: `Archivo: ${file.name}`,
-            fileType: 'text',
-            fileName: file.name
-          }
-        });
-      };
-      reader.readAsText(file);
+    // Agregar resumen de hallazgos
+    if (finalData.weight) {
+      notes.push(`Peso: ${finalData.weight.value} ${finalData.weight.unit}`);
     }
-  }, []);
-
-  // Voice recording functions
-  const startRecording = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      
-      const chunks: Blob[] = [];
-      
-      mediaRecorder.ondataavailable = (e) => {
-        chunks.push(e.data);
-      };
-      
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/wav' });
-        const file = new File([blob], `recording-${Date.now()}.wav`, { type: 'audio/wav' });
-        handleFileUpload(file);
-        
-        // Clean up
-        stream.getTracks().forEach(track => track.stop());
-      };
-      
-      mediaRecorder.start();
-      setIsRecording(true);
-      setRecordingTime(0);
-      
-      recordingIntervalRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-      
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      alert('No se pudo acceder al micrófono');
+    if (finalData.temperature) {
+      notes.push(`Temperatura: ${finalData.temperature.value}°C (${finalData.temperature.severity || 'normal'})`);
     }
-  }, [handleFileUpload]);
-
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      
-      if (recordingIntervalRef.current) {
-        clearInterval(recordingIntervalRef.current);
-        recordingIntervalRef.current = null;
-      }
-    }
-  }, [isRecording]);
-
-  // Process with multi-agent AI
-  const processWithAI = useCallback(async () => {
-    if (!captureData.input.trim()) {
-      setProcessError('Por favor ingresa algún texto o adjunta un archivo');
-      return;
+    if (finalData.symptoms?.length > 0) {
+      notes.push(`Síntomas: ${finalData.symptoms.map((s: any) => s.name).join(', ')}`);
     }
     
-    setIsProcessing(true);
-    setProcessError(null);
-    setShowPreview(false);
-    
-          try {
-        console.log('🚀 Iniciando procesamiento multi-agente');
-        
-        // Configurar callback para mostrar pasos de procesamiento
-        contextAwareAI.setStepUpdateCallback((step) => {
-          console.log(`🤖 ${step.agent}: ${step.action}`);
-        });
-        
-        // Usar el coordinador de IA multi-agente con metadata
-        const result = await contextAwareAI.processWithContext(
-          captureData.input,
-          captureData.metadata
-        );
-      
-      console.log('📊 Resultado del procesamiento:', result);
-      
-      setAiProcessingResult(result);
-      
-      // Si necesita clarificación, mostrar diálogo
-      if (result.clarificationNeeded) {
-        setShowClarificationDialog(true);
-        
-        // Inicializar respuestas vacías para las preguntas
-        const initialResponses: {[key: string]: string} = {};
-        result.questions.forEach((q: string) => {
-          initialResponses[q] = '';
-        });
-        setUserResponses(initialResponses);
-      } else {
-        // Procesar directamente si la confianza es alta
-        await processAiResult(result);
-      }
-      
-    } catch (error: any) {
-      console.error('Error procesando con IA:', error);
-      setProcessError(error.message || 'Error al procesar');
-    } finally {
-      setIsProcessing(false);
+    // Agregar sugerencias si las hay
+    if (result.suggestions.length > 0) {
+      notes.push('\nSugerencias:');
+      result.suggestions.forEach((s: string) => notes.push(`• ${s}`));
     }
-  }, [captureData]);
+    
+    // Agregar etiquetas automáticas
+    if (finalData.autoTags?.length > 0) {
+      notes.push(`\nEtiquetas: ${finalData.autoTags.join(', ')}`);
+    }
+    
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Capture: Generated notes:', notes.join('\n').substring(0, 100), '...');
+    }
+    return notes.join('\n');
+  };
+
+  // Validate extracted data
+  const validateExtractedData = (data: ExtractedData): ValidationResult => {
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Capture: Validating extracted data.', data);
+    }
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    
+    // Basic validation
+    if (data.confidence < 0.3) {
+      warnings.push('Confianza baja en la extracción. Revisa los datos.');
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.warn('Capture: Low confidence warning.');
+      }
+    }
+    
+    if (data.confidence < 0.1) {
+      errors.push('Confianza muy baja. La IA no pudo procesar correctamente el input.');
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.error('Capture: Very low confidence error.');
+      }
+    }
+    
+    // Type-specific validation
+    if (data.type === 'weight' && data.data?.value) {
+      if (data.data.value < 1 || data.data.value > 30) {
+        warnings.push('Peso fuera del rango normal para bebés/niños.');
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.warn('Capture: Weight out of normal range.');
+        }
+      }
+    }
+    
+    if (data.type === 'temperature' && data.data?.value) {
+      if (data.data.value > 38) {
+        warnings.push('Temperatura alta detectada. Considera consultar al pediatra.');
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.warn('Capture: High temperature warning.');
+        }
+      }
+    }
+    
+    // Check for attention required
+    if (data.requiresAttention) {
+      warnings.push('Este registro requiere atención médica según la IA.');
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.warn('Capture: Requires attention warning.');
+      }
+    }
+    
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Capture: Validation result:', { isValid: errors.length === 0, errors, warnings });
+    }
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings
+    };
+  };
 
   // Procesar resultado de IA
-  const processAiResult = async (result: any) => {
+  const processAiResult = useCallback(async (result: any) => {
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Capture: Processing AI final result.', result);
+    }
     const { finalData } = result;
     
     // Convertir a formato ExtractedData
@@ -326,40 +208,304 @@ const Capture: React.FC = () => {
     // Validar
     const validationResult = validateExtractedData(extractedData);
     setValidation(validationResult);
-  };
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Capture: Extracted data set and validated.', extractedData, validationResult);
+    }
+  }, [generateNotes, validateExtractedData]);
 
-  // Generar notas inteligentes basadas en el análisis
-  const generateNotes = (result: any): string => {
-    const notes: string[] = [];
-    const { finalData } = result;
-    
-    // Agregar resumen de hallazgos
-    if (finalData.weight) {
-      notes.push(`Peso: ${finalData.weight.value} ${finalData.weight.unit}`);
-    }
-    if (finalData.temperature) {
-      notes.push(`Temperatura: ${finalData.temperature.value}°C (${finalData.temperature.severity || 'normal'})`);
-    }
-    if (finalData.symptoms?.length > 0) {
-      notes.push(`Síntomas: ${finalData.symptoms.map((s: any) => s.name).join(', ')}`);
+  // Handle file upload
+  const handleFileUpload = useCallback((file: File) => {
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Capture: File selected for upload:', file.name, file.type);
     }
     
-    // Agregar sugerencias si las hay
-    if (result.suggestions.length > 0) {
-      notes.push('\nSugerencias:');
-      result.suggestions.forEach((s: string) => notes.push(`• ${s}`));
+    if (file.type.startsWith('image/')) {
+      // Para imágenes, crear preview y placeholder
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.log('Capture: Image preview generated.');
+        }
+      };
+      reader.readAsDataURL(file);
+      
+      setCaptureData({
+        input: `[Imagen adjunta: ${file.name}] Por favor describe el contenido de esta imagen médica.`,
+        inputType: 'image',
+        file,
+        metadata: {
+          timestamp: new Date(),
+          context: `Imagen: ${file.name}`,
+          fileType: 'image',
+          fileName: file.name
+        }
+      });
+    } else if (file.type === 'application/pdf') {
+      // Para PDFs, indicar que es un documento
+      setCaptureData({
+        input: `[PDF adjunto: ${file.name}] Por favor describe el contenido de este documento médico.`,
+        inputType: 'pdf',
+        file,
+        metadata: {
+          timestamp: new Date(),
+          context: `PDF: ${file.name}`,
+          fileType: 'pdf',
+          fileName: file.name
+        }
+      });
+      
+      // Mostrar mensaje informativo
+      setProcessError('ℹ️ PDF detectado. Por favor describe brevemente qué tipo de documento es (ej: "análisis de sangre", "receta médica", etc.)');
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Capture: PDF file selected.', file.name);
+      }
+    } else if (file.type.startsWith('audio/')) {
+      // Para audio
+      setCaptureData({
+        input: `[Audio adjunto: ${file.name}]`,
+        inputType: 'audio',
+        file,
+        metadata: {
+          timestamp: new Date(),
+          context: `Audio: ${file.name}`,
+          fileType: 'audio',
+          fileName: file.name
+        }
+      });
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Capture: Audio file selected.', file.name);
+      }
+    } else {
+      // Para archivos de texto, leer el contenido
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        setCaptureData({
+          input: content,
+          inputType: 'text',
+          file,
+          metadata: {
+            timestamp: new Date(),
+            context: `Archivo: ${file.name}`,
+            fileType: 'text',
+            fileName: file.name
+          }
+        });
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.log('Capture: Text file content loaded.', content.substring(0, 50), '...');
+        }
+      };
+      reader.readAsText(file);
+    }
+  }, []);
+
+  // Voice recording functions
+  const startRecording = useCallback(async () => {
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Capture: Starting recording...');
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      
+      const chunks: Blob[] = [];
+      
+      mediaRecorder.ondataavailable = (e) => {
+        chunks.push(e.data);
+      };
+      
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/wav' });
+        const file = new File([blob], `recording-${Date.now()}.wav`, { type: 'audio/wav' });
+        handleFileUpload(file);
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.log('Capture: Recording stopped, file generated.', file.name);
+        }
+        
+        // Clean up
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+      
+    } catch (error: unknown) {
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        if (error instanceof Error) {
+          console.error('Capture: Error starting recording:', error.message);
+        } else {
+          console.error('Capture: Error starting recording:', error);
+        }
+      }
+      alert('No se pudo acceder al micrófono');
+    }
+  }, [handleFileUpload]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && isRecording) {
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Capture: Stopping recording...');
+      }
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+    }
+  }, [isRecording]);
+
+  // Process with multi-agent AI
+  const processWithAI = useCallback(async () => {
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Capture: Process with AI button clicked.');
+    }
+    if (!captureData.input.trim()) {
+      setProcessError('Por favor ingresa algún texto o adjunta un archivo');
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.warn('Capture: Process with AI aborted due to empty input.');
+      }
+      return;
     }
     
-    // Agregar etiquetas automáticas
-    if (finalData.autoTags?.length > 0) {
-      notes.push(`\nEtiquetas: ${finalData.autoTags.join(', ')}`);
-    }
+    setIsProcessing(true);
+    setProcessError(null);
+    setShowPreview(false);
     
-    return notes.join('\n');
-  };
+          try {
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.log('Capture: Initiating multi-agent processing.');
+        }
+        
+        // Configurar callback para mostrar pasos de procesamiento
+        contextAwareAI.setStepUpdateCallback((step) => {
+          if (import.meta.env.VITE_DEV === 'TRUE') {
+            console.log(`🤖 ${step.agent}: ${step.action}`);
+          }
+        });
+        
+        // Usar el coordinador de IA multi-agente con metadata
+        const result = await contextAwareAI.processWithContext(
+          captureData.input,
+          captureData.metadata
+        );
+      
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Capture: Multi-agent processing result:', result);
+      }
+      
+      setAiProcessingResult(result);
+      
+      // Si necesita clarificación, mostrar diálogo
+      if (result.clarificationNeeded) {
+        setShowClarificationDialog(true);
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.log('Capture: Clarification needed, showing dialog.');
+        }
+        
+        // Inicializar respuestas vacías para las preguntas
+        const initialResponses: {[key: string]: string} = {};
+        result.questions.forEach((q: string) => {
+          initialResponses[q] = '';
+        });
+        setUserResponses(initialResponses);
+      } else {
+        // Procesar directamente si la confianza es alta
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.log('Capture: No clarification needed, processing AI result.');
+        }
+        await processAiResult(result);
+      }
+      
+    } catch (error: unknown) {
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        if (error instanceof Error) {
+          console.error('Capture: Error processing with AI:', error.message);
+        } else {
+          console.error('Capture: Error processing with AI:', error);
+        }
+      }
+      setProcessError(error instanceof Error ? error.message : 'Error al procesar');
+    } finally {
+      setIsProcessing(false);
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Capture: AI processing finished.');
+      }
+    }
+  }, [captureData, processAiResult]);
+
+  // Update suggestions based on input
+  useEffect(() => {
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Capture: Input data changed, updating suggestions/detected type.', captureData.input.length);
+    }
+    if (captureData.input.length > 10) {
+      const inputLower = captureData.input.toLowerCase();
+      const newSuggestions: string[] = [];
+      
+      // Smart suggestions based on content
+      if (inputLower.includes('peso')) {
+        newSuggestions.push('¿Incluir condiciones de la medición? (con ropa, sin ropa, etc.)');
+        newSuggestions.push('¿Quién realizó la medición?');
+      }
+      
+      if (inputLower.includes('fiebre') || inputLower.includes('temperatura')) {
+        newSuggestions.push('¿Cómo se midió la temperatura? (oral, axilar, etc.)');
+        newSuggestions.push('¿Qué síntomas acompañan la fiebre?');
+      }
+      
+      if (inputLower.includes('síntoma') || inputLower.includes('dolor')) {
+        newSuggestions.push('¿Cuándo comenzaron los síntomas?');
+        newSuggestions.push('¿Qué tan severos son? (leve, moderado, severo)');
+      }
+      
+      setSuggestions(newSuggestions);
+      
+      // Detect probable type
+      const schema = SchemaService.getSchemaForInput(captureData.input, captureData.inputType);
+      const detectedExtractionType = schema.properties.extractionType?.const || 
+                                   schema.properties.extractionType?.enum?.[0] || 'note';
+      setDetectedType(detectedExtractionType);
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Capture: Detected type:', detectedExtractionType, 'Suggestions:', newSuggestions.length);
+      }
+    } else {
+      setSuggestions([]);
+      setDetectedType('note');
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Capture: Input too short for suggestions, resetting.');
+      }
+    }
+  }, [captureData.input]);
+
+  // Handle text input change
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setCaptureData(prev => ({
+      ...prev,
+      input: value,
+      inputType: 'text',
+      file: undefined
+    }));
+    setImagePreview(null); // Limpiar preview de imagen
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Capture: Text input changed:', value.substring(0, 50), '...');
+    }
+  }, []);
 
   // Manejar respuestas del usuario a las preguntas de clarificación
   const handleClarificationSubmit = async () => {
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Capture: Clarification dialog submitted.', userResponses);
+    }
     if (!aiProcessingResult) return;
     
     setIsProcessing(true);
@@ -368,62 +514,46 @@ const Capture: React.FC = () => {
         const enhancedInput = captureData.input + '\n\nRespuestas adicionales:\n' + 
           Object.entries(userResponses).map(([q, a]) => `${q}: ${a}`).join('\n');
         
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.log('Capture: Reprocessing with enhanced input.');
+        }
         const enhancedResult = await contextAwareAI.processWithContext(
           enhancedInput,
           { ...captureData.metadata, userResponses }
         );
       
       await processAiResult(enhancedResult);
-    } catch (error: any) {
-      console.error('Error procesando clarificaciones:', error);
-      setProcessError(error.message);
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Capture: Clarification reprocessing successful.');
+      }
+    } catch (error: unknown) {
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        if (error instanceof Error) {
+          console.error('Capture: Error processing clarifications:', error.message);
+        } else {
+          console.error('Capture: Error processing clarifications:', error);
+        }
+      }
+      setProcessError(error instanceof Error ? error.message : 'Error al procesar clarificaciones');
     } finally {
       setIsProcessing(false);
-    }
-  };
-
-  // Validate extracted data
-  const validateExtractedData = (data: ExtractedData): ValidationResult => {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-    
-    // Basic validation
-    if (data.confidence < 0.3) {
-      warnings.push('Confianza baja en la extracción. Revisa los datos.');
-    }
-    
-    if (data.confidence < 0.1) {
-      errors.push('Confianza muy baja. La IA no pudo procesar correctamente el input.');
-    }
-    
-    // Type-specific validation
-    if (data.type === 'weight' && data.data?.value) {
-      if (data.data.value < 1 || data.data.value > 30) {
-        warnings.push('Peso fuera del rango normal para bebés/niños.');
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Capture: Clarification processing finished.');
       }
     }
-    
-    if (data.type === 'temperature' && data.data?.value) {
-      if (data.data.value > 38) {
-        warnings.push('Temperatura alta detectada. Considera consultar al pediatra.');
-      }
-    }
-    
-    // Check for attention required
-    if (data.requiresAttention) {
-      warnings.push('Este registro requiere atención médica según la IA.');
-    }
-    
-    return {
-      isValid: errors.length === 0,
-      errors,
-      warnings
-    };
   };
 
   // Save extracted data
   const saveData = useCallback(async () => {
-    if (!extractedData || !user) return;
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Capture: Save data button clicked.');
+    }
+    if (!extractedData || !user) {
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.warn('Capture: Save data aborted due to missing extracted data or user.');
+      }
+      return;
+    }
     
     try {
       // Usar la fecha personalizada si fue modificada
@@ -431,6 +561,9 @@ const Capture: React.FC = () => {
         new Date(customDate + 'T' + new Date().toTimeString().split(' ')[0]) : 
         new Date(extractedData.timestamp);
       
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Capture: Final timestamp for saving:', finalTimestamp.toISOString());
+      }
       // Create health record using context
       const healthRecord = {
         userId: user.id,
@@ -456,7 +589,9 @@ const Capture: React.FC = () => {
 
       // Save using DataContext (automatically updates state)
       const savedRecord = await createHealthRecord(healthRecord);
-      console.log('Health record saved:', savedRecord);
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Capture: Health record saved successfully:', savedRecord);
+      }
 
       // Create insight if requires attention
       if (extractedData.requiresAttention) {
@@ -472,6 +607,9 @@ const Capture: React.FC = () => {
           isResolved: false,
           relatedRecords: [savedRecord.id]
         });
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.log('Capture: Insight created for attention-required record.');
+        }
       }
 
       // Show success message (you could add a toast notification here)
@@ -479,12 +617,21 @@ const Capture: React.FC = () => {
       
       // Navigate to timeline to see the new record
       navigate('/timeline');
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Capture: Navigating to timeline after save.');
+      }
       
-    } catch (error) {
-      console.error('Error saving data:', error);
+    } catch (error: unknown) {
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        if (error instanceof Error) {
+          console.error('Capture: Error saving data:', error.message);
+        } else {
+          console.error('Capture: Error saving data:', error);
+        }
+      }
       alert('Error al guardar los datos. Por favor intenta de nuevo.');
     }
-  }, [extractedData, user, captureData, navigate]);
+  }, [extractedData, user, captureData, navigate, createHealthRecord, createInsight, customDate]);
 
   // Quick input templates
   const quickTemplates = [
@@ -497,6 +644,9 @@ const Capture: React.FC = () => {
   ];
 
   const applyTemplate = (template: string) => {
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Capture: Applying quick template:', template);
+    }
     setCaptureData(prev => ({
       ...prev,
       input: template
@@ -505,6 +655,9 @@ const Capture: React.FC = () => {
 
   // Clear form
   const clearForm = useCallback(() => {
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Capture: Clearing form.');
+    }
     setCaptureData({
       input: '',
       inputType: 'text'
@@ -515,15 +668,39 @@ const Capture: React.FC = () => {
     setProcessError(null);
     setImagePreview(null);
     setCustomDate('');
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Capture: Form cleared.');
+    }
   }, []);
 
   // State for showing agent conversation
   const [showAgentConversation, setShowAgentConversation] = useState(false);
 
+  // Component mount/unmount lifecycle
+  useEffect(() => {
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Capture component mounted.');
+    }
+    return () => {
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Capture component unmounted.');
+      }
+      // Clean up recording if unmounted during recording
+      if (isRecording && mediaRecorderRef.current) {
+        stopRecording();
+      }
+    };
+  }, [isRecording, stopRecording]);
+
   return (
     <div className="capture-page">
       <header className="capture-header">
-        <button className="back-button" onClick={() => navigate('/')}>
+        <button className="back-button" onClick={() => {
+          if (import.meta.env.VITE_DEV === 'TRUE') {
+            console.log('Capture: Back button clicked.');
+          }
+          navigate('/');
+        }}>
           ← Volver
         </button>
         <h1>Capturar Datos</h1>
@@ -552,7 +729,12 @@ const Capture: React.FC = () => {
             <div className="input-types">
               <button 
                 className={`type-button ${captureData.inputType === 'text' ? 'active' : ''}`}
-                onClick={() => setCaptureData(prev => ({ ...prev, inputType: 'text' }))}
+                onClick={() => {
+                  setCaptureData(prev => ({ ...prev, inputType: 'text' }));
+                  if (import.meta.env.VITE_DEV === 'TRUE') {
+                    console.log('Capture: Input type switched to Text.');
+                  }
+                }}
               >
                 <span className="button-icon">✏️</span>
                 <span className="button-label">Texto</span>
@@ -560,7 +742,12 @@ const Capture: React.FC = () => {
               
               <button 
                 className="type-button"
-                onClick={() => imageInputRef.current?.click()}
+                onClick={() => {
+                  imageInputRef.current?.click();
+                  if (import.meta.env.VITE_DEV === 'TRUE') {
+                    console.log('Capture: Camera button clicked.');
+                  }
+                }}
               >
                 <span className="button-icon">📷</span>
                 <span className="button-label">Cámara</span>
@@ -568,7 +755,12 @@ const Capture: React.FC = () => {
               
               <button 
                 className="type-button"
-                onClick={() => galleryInputRef.current?.click()}
+                onClick={() => {
+                  galleryInputRef.current?.click();
+                  if (import.meta.env.VITE_DEV === 'TRUE') {
+                    console.log('Capture: Gallery button clicked.');
+                  }
+                }}
               >
                 <span className="button-icon">🖼️</span>
                 <span className="button-label">Galería</span>
@@ -576,7 +768,16 @@ const Capture: React.FC = () => {
               
               <button 
                 className={`type-button ${isRecording ? 'recording' : ''}`}
-                onClick={isRecording ? stopRecording : startRecording}
+                onClick={() => {
+                  if (isRecording) {
+                    stopRecording();
+                  } else {
+                    startRecording();
+                  }
+                  if (import.meta.env.VITE_DEV === 'TRUE') {
+                    console.log('Capture: Audio recording button clicked.', { isRecording });
+                  }
+                }}
               >
                 <span className="button-icon">{isRecording ? '🔴' : '🎤'}</span>
                 <span className="button-label">{isRecording ? `${recordingTime}s` : 'Audio'}</span>
@@ -584,7 +785,12 @@ const Capture: React.FC = () => {
               
               <button 
                 className="type-button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => {
+                  fileInputRef.current?.click();
+                  if (import.meta.env.VITE_DEV === 'TRUE') {
+                    console.log('Capture: File button clicked.');
+                  }
+                }}
               >
                 <span className="button-icon">📎</span>
                 <span className="button-label">Archivo</span>
@@ -608,23 +814,37 @@ const Capture: React.FC = () => {
             </div>
           </div>
 
+          {/* Quick Input Templates */}
+          <div className="quick-templates">
+            <h4>Plantillas rápidas:</h4>
+            <div className="template-buttons">
+              {quickTemplates.map((item, index) => (
+                <button key={index} className="template-button" onClick={() => applyTemplate(item.template)}>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Smart Suggestions based on AI analysis */}
-          {aiProcessingResult?.suggestions && aiProcessingResult.suggestions.length > 0 && (
+          {suggestions.length > 0 && (
             <div className="suggestions elegant">
               <h4>💡 Sugerencias inteligentes</h4>
               <ul>
-                {aiProcessingResult.suggestions.map((suggestion: string, index: number) => (
-                  <li key={index}>{suggestion}</li>
+                {suggestions.map((suggestion: string, index: number) => (
+                  <li key={index}>
+                    {suggestion}
+                  </li>
                 ))}
               </ul>
             </div>
           )}
 
-          {/* File Inputs */}
+          {/* File Inputs (hidden) */}
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.txt,.doc,.docx"
+            accept=".pdf,.txt,.doc,.docx,.wav,.mp3,.mp4"
             onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
             style={{ display: 'none' }}
           />
@@ -652,6 +872,9 @@ const Capture: React.FC = () => {
                 onClick={() => {
                   setImagePreview(null);
                   setCaptureData(prev => ({ ...prev, input: '', file: undefined }));
+                  if (import.meta.env.VITE_DEV === 'TRUE') {
+                    console.log('Capture: Image preview removed.');
+                  }
                 }}
               >
                 ✕
@@ -708,11 +931,21 @@ const Capture: React.FC = () => {
 
         {/* Clarification Dialog mejorado */}
         {showClarificationDialog && aiProcessingResult && (
-          <div className="modal-overlay" onClick={() => setShowClarificationDialog(false)}>
+          <div className="modal-overlay" onClick={() => {
+            setShowClarificationDialog(false);
+            if (import.meta.env.VITE_DEV === 'TRUE') {
+              console.log('Capture: Clarification dialog overlay clicked, closing.');
+            }
+          }}>
             <div className="clarification-dialog elegant" onClick={e => e.stopPropagation()}>
               <div className="dialog-header">
                 <h3>🤔 Necesito aclarar algunos puntos</h3>
-                <button className="close-button" onClick={() => setShowClarificationDialog(false)}>✕</button>
+                <button className="close-button" onClick={() => {
+                  setShowClarificationDialog(false);
+                  if (import.meta.env.VITE_DEV === 'TRUE') {
+                    console.log('Capture: Clarification dialog close button clicked.');
+                  }
+                }}>✕</button>
               </div>
               
               <div className="confidence-bar">
@@ -728,10 +961,12 @@ const Capture: React.FC = () => {
                     <input
                       type="text"
                       value={userResponses[question] || ''}
-                      onChange={(e) => setUserResponses(prev => ({
-                        ...prev,
-                        [question]: e.target.value
-                      }))}
+                      onChange={(e) => {
+                        setUserResponses(prev => ({ ...prev, [question]: e.target.value }));
+                        if (import.meta.env.VITE_DEV === 'TRUE') {
+                          console.log('Capture: Clarification question response changed:', question, e.target.value);
+                        }
+                      }}
                       placeholder="Tu respuesta..."
                     />
                   </div>
@@ -739,7 +974,12 @@ const Capture: React.FC = () => {
               </div>
               
               <div className="clarification-actions">
-                <button className="secondary" onClick={() => setShowClarificationDialog(false)}>
+                <button className="secondary" onClick={() => {
+                  setShowClarificationDialog(false);
+                  if (import.meta.env.VITE_DEV === 'TRUE') {
+                    console.log('Capture: Clarification dialog cancelled.');
+                  }
+                }}>
                   Cancelar
                 </button>
                 <button className="primary" onClick={handleClarificationSubmit}>
@@ -767,7 +1007,12 @@ const Capture: React.FC = () => {
             {aiProcessingResult?.conversationLog && aiProcessingResult.conversationLog.length > 0 && (
               <button 
                 className="show-conversation-button"
-                onClick={() => setShowAgentConversation(!showAgentConversation)}
+                onClick={() => {
+                  setShowAgentConversation(!showAgentConversation);
+                  if (import.meta.env.VITE_DEV === 'TRUE') {
+                    console.log('Capture: Toggling agent conversation view.', !showAgentConversation);
+                  }
+                }}
               >
                 <span className="button-icon">💬</span>
                 Ver análisis detallado de agentes
@@ -899,7 +1144,12 @@ const Capture: React.FC = () => {
                   type="date"
                   id="custom-date"
                   value={customDate}
-                  onChange={(e) => setCustomDate(e.target.value)}
+                  onChange={(e) => {
+                    setCustomDate(e.target.value);
+                    if (import.meta.env.VITE_DEV === 'TRUE') {
+                      console.log('Capture: Custom date changed:', e.target.value);
+                    }
+                  }}
                   max={new Date().toISOString().split('T')[0]}
                   className="date-input"
                 />
@@ -919,7 +1169,12 @@ const Capture: React.FC = () => {
             </div>
 
             <div className="preview-actions">
-              <button className="edit-button" onClick={() => setShowPreview(false)}>
+              <button className="edit-button" onClick={() => {
+                setShowPreview(false);
+                if (import.meta.env.VITE_DEV === 'TRUE') {
+                  console.log('Capture: Edit button clicked, closing preview.');
+                }
+              }}>
                 ✏️ Editar
               </button>
               <button 
@@ -938,4 +1193,3 @@ const Capture: React.FC = () => {
 };
 
 export default Capture;
-export { Capture };

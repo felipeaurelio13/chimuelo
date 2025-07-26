@@ -19,6 +19,9 @@ interface SmartSuggestion {
 }
 
 const Chat: React.FC = () => {
+  if (import.meta.env.VITE_DEV === 'TRUE') {
+    console.log('Chat component rendered.');
+  }
   const navigate = useNavigate();
   const { user } = useAuth();
   const { 
@@ -44,13 +47,20 @@ const Chat: React.FC = () => {
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const isMounted = useRef(true);
 
   // Auto-scroll to bottom
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Chat: Scrolled to end of messages.');
+    }
   }, []);
 
   useEffect(() => {
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Chat component mounted.');
+    }
     scrollToBottom();
   }, [activeChatSession?.messages, scrollToBottom]);
 
@@ -58,6 +68,9 @@ const Chat: React.FC = () => {
   useEffect(() => {
     if (user && chatSessions.length === 0) {
       refreshChatSessions();
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Chat: Loading chat sessions for user:', user?.id);
+      }
     }
   }, [user, chatSessions.length, refreshChatSessions]);
 
@@ -82,6 +95,9 @@ const Chat: React.FC = () => {
     const target = e.target;
     target.style.height = 'auto';
     target.style.height = target.scrollHeight + 'px';
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Chat: Input message changed.', e.target.value);
+    }
   };
 
   // Handle suggestion click
@@ -89,19 +105,40 @@ const Chat: React.FC = () => {
     setInputData(prev => ({ ...prev, message: suggestion.text }));
     setShowSuggestions(false);
     inputRef.current?.focus();
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Chat: Suggestion clicked:', suggestion.text);
+    }
   };
 
   // Create new chat session
   const handleNewChat = useCallback(async () => {
     if (!user) return;
-    
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Chat: New chat initiated.');
+    }
+    setIsLoading(true);
+    setError(null);
+    setIsTyping(true);
+
     try {
       const title = `Chat ${new Date().toLocaleDateString()}`;
       const newSession = await createChatSession(title);
       setActiveChatSession(newSession);
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Chat: New chat session created:', newSession.title);
+      }
     } catch (error) {
       console.error('Error creating chat session:', error);
       setError('Error al crear nueva conversación');
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.error('Chat: Error creating new session:', error);
+      }
+    } finally {
+      setIsLoading(false);
+      setIsTyping(false);
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Chat: New chat process finished.');
+      }
     }
   }, [user, createChatSession, setActiveChatSession]);
 
@@ -114,12 +151,19 @@ const Chat: React.FC = () => {
     setError(null);
     setIsTyping(true);
 
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Chat: Sending message to AI:', message);
+    }
+
     try {
       // Create session if none exists
       let currentSession = activeChatSession;
       if (!currentSession) {
         currentSession = await createChatSession(`Chat ${new Date().toLocaleDateString()}`);
         setActiveChatSession(currentSession);
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.log('Chat: Created new session for message:', currentSession.title);
+        }
       }
 
       // Create user message
@@ -145,8 +189,14 @@ const Chat: React.FC = () => {
       if (inputData.includeContext) {
         try {
           context = await getSmartContext();
+          if (import.meta.env.VITE_DEV === 'TRUE') {
+            console.log('Chat: Smart context fetched.');
+          }
         } catch (error) {
           console.warn('Could not get smart context:', error);
+          if (import.meta.env.VITE_DEV === 'TRUE') {
+            console.warn('Chat: Could not get smart context:', error);
+          }
         }
       }
 
@@ -190,20 +240,32 @@ const Chat: React.FC = () => {
         // Clear input and reset
         setInputData(prev => ({ ...prev, message: '' }));
         setShowSuggestions(false);
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.log('Chat: AI response received and session updated.', assistantMessage.content);
+        }
       } else {
         throw new Error(response.error || 'No se pudo obtener respuesta del asistente');
       }
     } catch (error: any) {
       console.error('Chat error:', error);
       setError(error.message || 'Error al enviar el mensaje. Por favor intenta de nuevo.');
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.error('Chat: Error sending message:', error);
+      }
     } finally {
       setIsLoading(false);
       setIsTyping(false);
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Chat: Message sending process finished.');
+      }
     }
   }, [inputData, user, isLoading, activeChatSession, createChatSession, setActiveChatSession, updateChatSession, getSmartContext]);
 
   // Handle enter key
   const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Chat: Key pressed in input.', e.key);
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();

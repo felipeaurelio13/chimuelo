@@ -21,6 +21,10 @@ interface RecentRecord {
 }
 
 const Dashboard: React.FC = () => {
+  if (import.meta.env.VITE_DEV === 'TRUE') {
+    console.log('Dashboard component rendered.');
+  }
+
   const { user } = useAuth();
   const { state: dataState } = useData();
   const navigate = useNavigate();
@@ -30,6 +34,9 @@ const Dashboard: React.FC = () => {
   
   // Procesar datos reales cuando cambien
   useEffect(() => {
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Dashboard: Processing health records data.', dataState.healthRecords);
+    }
     if (!dataState.healthRecords) return;
     
     // Ordenar registros por fecha
@@ -140,11 +147,23 @@ const Dashboard: React.FC = () => {
   // Check Worker connection on component mount
   useEffect(() => {
     const checkConnection = async () => {
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Dashboard: Checking Worker connection...');
+      }
       try {
         const response = await apiService.healthCheck();
         setIsConnected(response.success);
-      } catch (error) {
-        console.error('Worker connection failed:', error);
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.log('Dashboard: Worker connection status:', response.success ? 'Online' : 'Offline');
+        }
+      } catch (error: unknown) {
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          if (error instanceof Error) {
+            console.error('Dashboard: Worker connection failed:', error.message);
+          } else {
+            console.error('Dashboard: Worker connection failed:', error);
+          }
+        }
         setIsConnected(false);
       }
     };
@@ -153,6 +172,9 @@ const Dashboard: React.FC = () => {
   }, []);
 
   const handleQuickAction = (action: string) => {
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Dashboard: Quick action triggered:', action);
+    }
     switch (action) {
       case 'capture':
         navigate('/capture');
@@ -164,7 +186,7 @@ const Dashboard: React.FC = () => {
         navigate('/chat');
         break;
       case 'profile':
-        navigate('/profile');
+        navigate('/settings'); // Changed from /profile to /settings
         break;
       default:
         console.log('Unknown action:', action);
@@ -193,7 +215,12 @@ const Dashboard: React.FC = () => {
             <span className={`status-dot ${isConnected ? 'online' : 'offline'}`}></span>
             {isConnected ? 'Online' : 'Offline'}
           </button>
-          <button className="profile-button" onClick={() => navigate('/profile')}>
+          <button className="profile-button" onClick={() => {
+            if (import.meta.env.VITE_DEV === 'TRUE') {
+              console.log('Dashboard: Profile button clicked.');
+            }
+            navigate('/profile');
+          }}>
             <span className="profile-avatar">
               {user?.name?.charAt(0) || 'U'}
             </span>
@@ -270,7 +297,12 @@ const Dashboard: React.FC = () => {
           <h2 className="section-title">Actividad reciente</h2>
           <button 
             className="view-all-button"
-            onClick={() => navigate('/timeline')}
+            onClick={() => {
+              if (import.meta.env.VITE_DEV === 'TRUE') {
+                console.log('Dashboard: View all activity button clicked.');
+              }
+              navigate('/timeline');
+            }}
           >
             Ver todo
           </button>
@@ -293,7 +325,12 @@ const Dashboard: React.FC = () => {
       {/* Emergency/Quick Actions FAB */}
       <button 
         className="fab primary"
-        onClick={() => handleQuickAction('capture')}
+        onClick={() => {
+          if (import.meta.env.VITE_DEV === 'TRUE') {
+            console.log('Dashboard: FAB (Floating Action Button) clicked.');
+          }
+          handleQuickAction('capture');
+        }}
         title="Capturar datos rápidamente"
       >
         <span className="fab-icon">+</span>

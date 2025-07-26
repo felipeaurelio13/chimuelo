@@ -1,30 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import '../styles/Auth.css';
 
 const Login: React.FC = () => {
+  if (import.meta.env.VITE_DEV === 'TRUE') {
+    console.log('Login component rendered');
+  }
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
-  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  
-  const { login, error, clearError, isAuthenticated } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { login, isAuthenticated, error, clearError } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Login: User is authenticated, navigating to dashboard.');
+      }
       navigate('/', { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
   // Clear error when component mounts
   useEffect(() => {
-    clearError();
-  }, [clearError]);
+    // No need to clear error here, as clearError is now memoized and
+    // we only want to clear it on explicit user action or successful login.
+    // clearError();
+  }, []); // Removed clearError from dependency array
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -33,25 +41,43 @@ const Login: React.FC = () => {
       [name]: value,
     }));
     
-    // Clear error when user starts typing
-    if (error) {
-      clearError();
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log(`Login: Form data changed - ${name}: ${value}`);
     }
+
+    // Clear error when user starts typing - removed to prevent infinite re-renders
+    // if (error) {
+    //   clearError();
+    // }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Login: handleSubmit initiated.');
+      console.log('Login: Form data for submission:', formData);
+    }
+
     // Validación básica
     if (!formData.email) {
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.warn('Login: Email is empty.');
+      }
       return;
     }
     
     if (!formData.password) {
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.warn('Login: Password is empty.');
+      }
       return;
     }
     
     if (formData.password.length < 6) {
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.warn('Login: Password is too short.');
+      }
       return;
     }
 
@@ -62,15 +88,27 @@ const Login: React.FC = () => {
       const result = await login(formData.email, formData.password);
       
       if (result.success) {
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.log('Login: Login successful, redirecting...', result);
+        }
         console.log('Login exitoso, redirigiendo...');
         navigate('/', { replace: true });
       } else {
+        if (import.meta.env.VITE_DEV === 'TRUE') {
+          console.error('Login: Login failed:', result.error);
+        }
         console.error('Login falló:', result.error);
       }
     } catch (error) {
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.error('Login: Error during login attempt:', error);
+      }
       console.error('Error en login:', error);
     } finally {
       setIsLoading(false);
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Login: handleSubmit finished. Loading state set to false.');
+      }
     }
   };
 
@@ -118,61 +156,34 @@ const Login: React.FC = () => {
                 value={formData.password}
                 onChange={handleChange}
                 className="form-input"
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Min. 6 caracteres"
                 required
                 autoComplete="current-password"
-                minLength={6}
               />
               <button
                 type="button"
-                className="password-toggle"
+                className="password-toggle-button"
                 onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
               >
-                {showPassword ? '👁️' : '👁️‍🗨️'}
+                {showPassword ? (
+                  <i className="fas fa-eye-slash"></i>
+                ) : (
+                  <i className="fas fa-eye"></i>
+                )}
               </button>
             </div>
           </div>
 
-          {error && (
-            <div className="error-message" role="alert">
-              <span>⚠️ {error}</span>
-              <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', opacity: 0.9 }}>
-                Credenciales correctas: felipelorcac@gmail.com / phil.13
-              </div>
-            </div>
-          )}
+          {error && <p className="auth-error-message">{error}</p>}
 
-          <button
-            type="submit"
-            className={`auth-button ${isFormValid ? 'active' : 'disabled'}`}
-            disabled={!isFormValid || isLoading}
-          >
-            {isLoading ? (
-              <span className="loading-spinner">
-                <span className="spinner"></span>
-                Iniciando sesión...
-              </span>
-            ) : (
-              'Iniciar Sesión'
-            )}
+          <button type="submit" className="auth-button" disabled={!isFormValid || isLoading}>
+            {isLoading ? 'Iniciando sesión...' : 'Iniciar sesión'}
           </button>
+
+          <p className="auth-footer">
+            ¿No tienes una cuenta? <a href="/register">Regístrate aquí</a>
+          </p>
         </form>
-
-        <div className="auth-footer">
-          <p>
-            ¿No tienes cuenta?{' '}
-            <Link to="/register" className="auth-link">
-              Regístrate aquí
-            </Link>
-          </p>
-        </div>
-
-        <div className="demo-info">
-          <p className="demo-text">
-            <strong>Demo:</strong> Usa email: felipelorcac@gmail.com y password: phil.13
-          </p>
-        </div>
       </div>
     </div>
   );

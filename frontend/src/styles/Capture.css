@@ -3,6 +3,7 @@
 .capture-page {
   min-height: 100vh;
   background: linear-gradient(to bottom, #fafafa, #f5f5f5);
+  color: var(--text-primary); /* Ensure text is visible */
 }
 
 .capture-header {
