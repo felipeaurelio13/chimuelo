@@ -4,16 +4,18 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
 import { ThemeProvider, ThemeScript } from './contexts/ThemeContext';
 import LoadingScreen from './components/LoadingScreen';
+import ModernNav from './components/ModernNav';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import Capture from './pages/Capture';
-import Timeline from './pages/Timeline';
+import Dashboard from './pages/ModernDashboard';
+import Capture from './pages/ModernCapture';
+import Timeline from './pages/ModernTimeline';
 import Chat from './pages/Chat';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import './App.css';
 import './styles/themes.css';
+import './styles/design-system.css';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -26,6 +28,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
 function AppContent() {
   const basename = import.meta.env.MODE === 'production' ? '/chimuelo' : '/';
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     if ('serviceWorker' in navigator && import.meta.env.MODE === 'production') {
@@ -40,42 +43,47 @@ function AppContent() {
 
   return (
     <Router basename={basename}>
-      <div className="app-container">
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/" element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/capture" element={
-            <ProtectedRoute>
-              <Capture />
-            </ProtectedRoute>
-          } />
-          <Route path="/timeline" element={
-            <ProtectedRoute>
-              <Timeline />
-            </ProtectedRoute>
-          } />
-          <Route path="/chat" element={
-            <ProtectedRoute>
-              <Chat />
-            </ProtectedRoute>
-          } />
-          <Route path="/profile" element={
-            <ProtectedRoute>
-              <Profile />
-            </ProtectedRoute>
-          } />
-          <Route path="/settings" element={
-            <ProtectedRoute>
-              <Settings />
-            </ProtectedRoute>
-          } />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+      <div className="ds-page">
+        {/* Modern Navigation - Only show when authenticated */}
+        {isAuthenticated && <ModernNav />}
+        
+        <div className="app-content">
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/capture" element={
+              <ProtectedRoute>
+                <Capture />
+              </ProtectedRoute>
+            } />
+            <Route path="/timeline" element={
+              <ProtectedRoute>
+                <Timeline />
+              </ProtectedRoute>
+            } />
+            <Route path="/chat" element={
+              <ProtectedRoute>
+                <Chat />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            } />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
       </div>
     </Router>
   );
