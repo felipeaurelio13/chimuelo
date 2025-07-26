@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
+import { TimelineErrorBoundary } from '../components/TimelineErrorBoundary';
+import { TimelineSkeleton } from '../components/TimelineSkeleton';
 import { type HealthRecord } from '../services/databaseService';
 import '../styles/Timeline.css';
 
@@ -35,14 +37,15 @@ interface PredictiveInsight {
   urgency: 1 | 2 | 3 | 4 | 5;
 }
 
-const Timeline: React.FC = () => {
+// Timeline component wrapped with Error Boundary
+const TimelineContent: React.FC = () => {
   if (import.meta.env.VITE_DEV === 'TRUE') {
     console.log('Timeline component rendered.');
   }
   const navigate = useNavigate();
   const { user } = useAuth();
   const { 
-    state: { healthRecords = [], healthStats, isLoading },
+    state: { healthRecords = [], healthStats, isLoading, errors },
     refreshHealthRecords,
   } = useData();
 
@@ -53,40 +56,50 @@ const Timeline: React.FC = () => {
   const [selectedType, setSelectedType] = useState<string>('all');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [showInsights, setShowInsights] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Load data on mount
+  // Load data on mount with improved error handling
   useEffect(() => {
     if (import.meta.env.VITE_DEV === 'TRUE') {
       console.log('Timeline component mounted.');
     }
+
     const loadData = async () => {
       if (!user?.id) {
         if (import.meta.env.VITE_DEV === 'TRUE') {
           console.log('Timeline: No user ID available, cannot load data.');
         }
+        setLocalError('Usuario no autenticado. Por favor, inicia sesión nuevamente.');
         return;
       }
+
       if (import.meta.env.VITE_DEV === 'TRUE') {
         console.log('Timeline: Loading data for user:', user.id);
       }
+
       try {
-        setError(null);
-        await refreshHealthRecords(); // DataContext handles fetching
+        setLocalError(null);
+        await refreshHealthRecords();
         if (import.meta.env.VITE_DEV === 'TRUE') {
           console.log('Timeline: Data refreshed from DataContext.');
         }
       } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : 'Error desconocido al cargar datos';
+        
         if (import.meta.env.VITE_DEV === 'TRUE') {
-          if (err instanceof Error) {
-            console.error('Timeline: Error loading timeline data:', err.message);
-          } else {
-            console.error('Timeline: Error loading timeline data:', err);
-          }
+          console.error('Timeline: Error loading timeline data:', err);
         }
-        setError('Error al cargar los datos. Por favor, intenta de nuevo.');
+
+        // Set local error with retry option
+        if (retryCount < 3) {
+          setLocalError(`${errorMessage} (Intento ${retryCount + 1}/3)`);
+        } else {
+          setLocalError('Error persistente al cargar los datos. Por favor, recarga la página.');
+        }
       }
     };
+
     loadData();
 
     return () => {
@@ -94,14 +107,24 @@ const Timeline: React.FC = () => {
         console.log('Timeline component unmounted.');
       }
     };
-  }, [refreshHealthRecords, user?.id]);
+  }, [refreshHealthRecords, user?.id, retryCount]);
 
-  // Filter records based on date range and type
+  // Retry function
+  const handleRetry = useCallback(() => {
+    setRetryCount(prev => prev + 1);
+    setLocalError(null);
+  }, []);
+
+  // Filter records based on date range and type with error handling
   const filteredRecords = useMemo(() => {
     if (import.meta.env.VITE_DEV === 'TRUE') {
       console.log('Timeline: Filtering records by type:', selectedType, 'Total records:', healthRecords.length, 'Filters:', filters);
     }
-    if (!Array.isArray(healthRecords)) return [];
+    
+    if (!Array.isArray(healthRecords)) {
+      console.warn('Timeline: healthRecords is not an array:', healthRecords);
+      return [];
+    }
     
     try {
       const now = new Date();
@@ -129,11 +152,16 @@ const Timeline: React.FC = () => {
         if (!record || !record.timestamp) return false;
         
         const recordDate = new Date(record.timestamp);
+        if (isNaN(recordDate.getTime())) {
+          console.warn('Timeline: Invalid date in record:', record);
+          return false;
+        }
+        
         if (recordDate < startDate) return false;
         
         if (selectedType !== 'all' && record.type !== selectedType) return false;
         
-        if (filters.requiresAttention && !record.requiresAttention) return false; // Corrected to record.requiresAttention
+        if (filters.requiresAttention && !record.requiresAttention) return false;
         
         if (filters.searchQuery) {
           const searchLower = filters.searchQuery.toLowerCase();
@@ -144,23 +172,20 @@ const Timeline: React.FC = () => {
         
         return true;
       });
+
       if (import.meta.env.VITE_DEV === 'TRUE') {
         console.log('Timeline: Filtered records count:', result.length);
       }
       return result;
     } catch (err: unknown) {
       if (import.meta.env.VITE_DEV === 'TRUE') {
-        if (err instanceof Error) {
-          console.error('Timeline: Error filtering records:', err.message);
-        } else {
-          console.error('Timeline: Error filtering records:', err);
-        }
+        console.error('Timeline: Error filtering records:', err);
       }
       return [];
     }
   }, [healthRecords, filters, selectedType]);
 
-  // Group records by date
+  // Group records by date with error handling
   const groupedRecords = useMemo(() => {
     if (import.meta.env.VITE_DEV === 'TRUE') {
       console.log('Timeline: Grouping filtered records.');
@@ -174,6 +199,8 @@ const Timeline: React.FC = () => {
         if (!record || !record.timestamp) return;
         
         const date = new Date(record.timestamp);
+        if (isNaN(date.getTime())) return;
+        
         const dateKey = date.toISOString().split('T')[0];
         
         if (!groups[dateKey]) {
@@ -198,11 +225,7 @@ const Timeline: React.FC = () => {
       return sortedGroups;
     } catch (err: unknown) {
       if (import.meta.env.VITE_DEV === 'TRUE') {
-        if (err instanceof Error) {
-          console.error('Timeline: Error grouping records:', err.message);
-        } else {
-          console.error('Timeline: Error grouping records:', err);
-        }
+        console.error('Timeline: Error grouping records:', err);
       }
       return [];
     }
@@ -222,7 +245,7 @@ const Timeline: React.FC = () => {
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
       
       if (weightRecords.length >= 3) {
-        const weights = weightRecords.map(r => r.data.weight).filter(w => typeof w === 'number');
+        const weights = weightRecords.map(r => r.data.weight).filter(w => typeof w === 'number' && !isNaN(w));
         if (weights.length >= 2) {
           const avgGrowth = (weights[weights.length - 1] - weights[0]) / (weights.length - 1);
           
@@ -236,9 +259,6 @@ const Timeline: React.FC = () => {
               actionable: false,
               urgency: 2
             });
-            if (import.meta.env.VITE_DEV === 'TRUE') {
-              console.log('Timeline: Generated growth trend insight.', insights[insights.length - 1]);
-            }
           }
         }
       }
@@ -266,21 +286,11 @@ const Timeline: React.FC = () => {
             actionable: true,
             urgency: 3
           });
-          if (import.meta.env.VITE_DEV === 'TRUE') {
-            console.log('Timeline: Generated symptom pattern insight.', insights[insights.length - 1]);
-          }
         }
-      }
-      if (import.meta.env.VITE_DEV === 'TRUE') {
-        console.log('Timeline: Total predictive insights generated:', insights.length);
       }
     } catch (err: unknown) {
       if (import.meta.env.VITE_DEV === 'TRUE') {
-        if (err instanceof Error) {
-          console.error('Timeline: Error generating insights:', err.message);
-        } else {
-          console.error('Timeline: Error generating insights:', err);
-        }
+        console.error('Timeline: Error generating insights:', err);
       }
     }
 
@@ -288,46 +298,45 @@ const Timeline: React.FC = () => {
   }, [filteredRecords]);
 
   // Toggle group expansion
-  const toggleGroupExpansion = (date: string) => {
+  const toggleGroupExpansion = useCallback((date: string) => {
     if (import.meta.env.VITE_DEV === 'TRUE') {
       console.log('Timeline: Toggling group expansion for date:', date);
     }
-    const newExpanded = new Set(expandedGroups);
-    if (newExpanded.has(date)) {
-      newExpanded.delete(date);
-    } else {
-      newExpanded.add(date);
-    }
-    setExpandedGroups(newExpanded);
-    if (import.meta.env.VITE_DEV === 'TRUE') {
-      console.log('Timeline: Expanded groups after toggle:', newExpanded);
-    }
-  };
+    setExpandedGroups(prev => {
+      const newExpanded = new Set(prev);
+      if (newExpanded.has(date)) {
+        newExpanded.delete(date);
+      } else {
+        newExpanded.add(date);
+      }
+      return newExpanded;
+    });
+  }, []);
 
-  // Handle filter changes (date range and type)
-  const handleDateRangeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  // Handle filter changes
+  const handleDateRangeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     if (import.meta.env.VITE_DEV === 'TRUE') {
       console.log('Timeline: Date range filter changed to:', e.target.value);
     }
-    setFilters(prev => ({ ...prev, dateRange: e.target.value as any }));
-  };
+    setFilters(prev => ({ ...prev, dateRange: e.target.value as TimelineFilters['dateRange'] }));
+  }, []);
 
-  const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleTypeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     if (import.meta.env.VITE_DEV === 'TRUE') {
       console.log('Timeline: Type filter changed to:', e.target.value);
     }
     setSelectedType(e.target.value);
-  };
+  }, []);
 
-  const handleShowInsightsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleShowInsightsChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (import.meta.env.VITE_DEV === 'TRUE') {
       console.log('Timeline: Show insights toggled to:', e.target.checked);
     }
     setShowInsights(e.target.checked);
-  };
+  }, []);
 
   // Format date for display
-  const formatDateGroup = (date: string) => {
+  const formatDateGroup = useCallback((date: string) => {
     const d = new Date(date);
     const today = new Date();
     const yesterday = new Date(today);
@@ -344,10 +353,10 @@ const Timeline: React.FC = () => {
         month: 'long' 
       });
     }
-  };
+  }, []);
 
   // Get icon for record type
-  const getTypeIcon = (type: string) => {
+  const getTypeIcon = useCallback((type: string) => {
     const icons: { [key: string]: string } = {
       weight: '⚖️',
       height: '📏',
@@ -360,9 +369,11 @@ const Timeline: React.FC = () => {
       note: '📝'
     };
     return icons[type] || '📋';
-  };
+  }, []);
 
-  // Handle error state
+  // Handle error states (both DataContext errors and local errors)
+  const error = localError || errors.records;
+  
   if (error) {
     if (import.meta.env.VITE_DEV === 'TRUE') {
       console.log('Timeline: Rendering error state.', error);
@@ -372,40 +383,38 @@ const Timeline: React.FC = () => {
         <div className="error-container">
           <h2>Error al cargar Timeline</h2>
           <p>{error}</p>
-          <button className="btn-primary" onClick={() => {
-            if (import.meta.env.VITE_DEV === 'TRUE') {
-              console.log('Timeline: Reload page button clicked.');
-            }
-            window.location.reload();
-          }}>
-            Recargar página
-          </button>
-          <button className="btn-secondary" onClick={() => {
-            if (import.meta.env.VITE_DEV === 'TRUE') {
-              console.log('Timeline: Back to home button clicked from error state.');
-            }
-            navigate('/');
-          }}>
-            Volver al inicio
-          </button>
+          <div className="error-actions">
+            <button className="btn btn-primary" onClick={handleRetry}>
+              Intentar de nuevo
+            </button>
+            <button className="btn btn-secondary" onClick={() => {
+              if (import.meta.env.VITE_DEV === 'TRUE') {
+                console.log('Timeline: Reload page button clicked.');
+              }
+              window.location.reload();
+            }}>
+              Recargar página
+            </button>
+            <button className="btn btn-secondary" onClick={() => {
+              if (import.meta.env.VITE_DEV === 'TRUE') {
+                console.log('Timeline: Back to home button clicked from error state.');
+              }
+              navigate('/');
+            }}>
+              Volver al inicio
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Handle loading state
+  // Handle loading state with skeleton
   if (isLoading) {
     if (import.meta.env.VITE_DEV === 'TRUE') {
       console.log('Timeline: Rendering loading state.');
     }
-    return (
-      <div className="timeline-page">
-        <div className="loading-container">
-          <div className="loading-spinner"></div>
-          <p>Cargando línea de tiempo...</p>
-        </div>
-      </div>
-    );
+    return <TimelineSkeleton count={5} />;
   }
 
   // Handle empty state
@@ -430,7 +439,7 @@ const Timeline: React.FC = () => {
           <div className="empty-icon">📅</div>
           <h2>No hay registros aún</h2>
           <p>Comienza agregando datos de salud de tu bebé</p>
-          <button className="btn-primary" onClick={() => {
+          <button className="btn btn-primary" onClick={() => {
             if (import.meta.env.VITE_DEV === 'TRUE') {
               console.log('Timeline: Add first record button clicked from empty state.');
             }
@@ -455,7 +464,7 @@ const Timeline: React.FC = () => {
           ← Volver
         </button>
         <h1>Línea de Tiempo</h1>
-        <button className="add-button" onClick={() => {
+        <button className="add-button btn btn-primary" onClick={() => {
           if (import.meta.env.VITE_DEV === 'TRUE') {
             console.log('Timeline: Add new record button clicked.');
           }
@@ -470,6 +479,7 @@ const Timeline: React.FC = () => {
         <div className="filter-group">
           <label>Período:</label>
           <select 
+            className="input"
             value={filters.dateRange} 
             onChange={handleDateRangeChange}
           >
@@ -484,6 +494,7 @@ const Timeline: React.FC = () => {
         <div className="filter-group">
           <label>Tipo:</label>
           <select 
+            className="input"
             value={selectedType} 
             onChange={handleTypeChange}
           >
@@ -520,7 +531,7 @@ const Timeline: React.FC = () => {
             {predictiveInsights.map((insight, index) => (
               <div 
                 key={index} 
-                className={`insight-card urgency-${insight.urgency}`}
+                className={`insight-card card urgency-${insight.urgency}`}
               >
                 <h3>{insight.title}</h3>
                 <p>{insight.description}</p>
@@ -531,11 +542,10 @@ const Timeline: React.FC = () => {
                   <span className="timeframe">{insight.timeframe}</span>
                 </div>
                 {insight.actionable && (
-                  <button className="action-button" onClick={() => {
+                  <button className="action-button btn btn-secondary" onClick={() => {
                     if (import.meta.env.VITE_DEV === 'TRUE') {
                       console.log('Timeline: Action button clicked for insight:', insight.title);
                     }
-                    // Add specific action logic here
                     alert(`Tomar acción para: ${insight.title}`);
                   }}>
                     Tomar acción
@@ -552,17 +562,23 @@ const Timeline: React.FC = () => {
         {groupedRecords.length === 0 ? (
           <div className="no-results">
             <p>No se encontraron registros con los filtros seleccionados</p>
+            <button className="btn btn-secondary" onClick={() => {
+              setFilters({ dateRange: 'all' });
+              setSelectedType('all');
+            }}>
+              Limpiar filtros
+            </button>
           </div>
         ) : (
           <div className="timeline-groups">
             {groupedRecords.map((group) => (
-              <div key={group.date} className="timeline-group">
+              <div key={group.date} className="timeline-group card">
                 <div 
                   className="group-header"
                   onClick={() => toggleGroupExpansion(group.date)}
                 >
                   <h3>{formatDateGroup(group.date)}</h3>
-                  <span className="record-count">{group.records.length} registros</span>
+                  <span className="record-count">{group.records.length} registro{group.records.length !== 1 ? 's' : ''}</span>
                   <span className={`expand-icon ${expandedGroups.has(group.date) ? 'expanded' : ''}`}>
                     ▼
                   </span>
@@ -574,12 +590,10 @@ const Timeline: React.FC = () => {
                       <div 
                         key={record.id} 
                         className={`timeline-record ${record.requiresAttention ? 'attention' : ''}`}
-                        // Added onClick for individual record (optional, if they are clickable)
                         onClick={() => {
                           if (import.meta.env.VITE_DEV === 'TRUE') {
                             console.log('Timeline: Record clicked:', record.id, record.type);
                           }
-                          // navigate to detail page or open modal
                         }}
                       >
                         <div className="record-icon">{getTypeIcon(record.type)}</div>
@@ -624,4 +638,13 @@ const Timeline: React.FC = () => {
   );
 };
 
-export { Timeline };
+// Main Timeline component with Error Boundary
+const Timeline: React.FC = () => {
+  return (
+    <TimelineErrorBoundary>
+      <TimelineContent />
+    </TimelineErrorBoundary>
+  );
+};
+
+export default Timeline;

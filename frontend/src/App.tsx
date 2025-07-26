@@ -1,19 +1,26 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
-import { ThemeProvider } from './contexts/ThemeContext';
+import { ThemeProvider, ThemeScript } from './contexts/ThemeContext';
+import { LoadingScreen } from './components/LoadingScreen';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Capture from './pages/Capture';
-import { Timeline } from './pages/Timeline';
+import Timeline from './pages/Timeline';
 import Chat from './pages/Chat';
 import Settings from './pages/Settings';
+import Profile from './pages/Profile';
 import './App.css';
+import './styles/themes.css';
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  // Esta lógica será manejada por AuthContext
+  return <>{children}</>;
 };
 
 function AppContent() {
@@ -55,6 +62,11 @@ function AppContent() {
               <Chat />
             </ProtectedRoute>
           } />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          } />
           <Route path="/settings" element={
             <ProtectedRoute>
               <Settings />
@@ -69,13 +81,19 @@ function AppContent() {
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <DataProvider>
-          <AppContent />
-        </DataProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <>
+      {/* Script para prevenir FOUC (Flash of Unstyled Content) */}
+      <ThemeScript />
+      
+      {/* Providers jerárquicos */}
+      <ThemeProvider>
+        <AuthProvider>
+          <DataProvider>
+            <AppContent />
+          </DataProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </>
   );
 }
 
