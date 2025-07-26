@@ -46,6 +46,35 @@ jobs:
         with:
           path: frontend/dist
 
+  deploy-worker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: worker/package-lock.json
+
+      - name: Install worker dependencies
+        run: |
+          cd worker
+          npm ci
+
+      - name: Deploy Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: |
+          cd worker
+          echo "$OPENAI_API_KEY" | npx wrangler secret put OPENAI_API_KEY --compatibility-date=2025-01-01
+          echo "$JWT_SECRET" | npx wrangler secret put JWT_SECRET --compatibility-date=2025-01-01
+          npx wrangler deploy
+
   deploy:
     environment:
       name: github-pages

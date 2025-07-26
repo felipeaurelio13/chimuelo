@@ -114,6 +114,12 @@
   border: 1px solid #fecaca;
 }
 
+.field-error {
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
 .auth-button {
   background: #4f46e5;
   color: white;
