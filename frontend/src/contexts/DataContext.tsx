@@ -116,6 +116,8 @@ interface DataContextType {
   // Utilities
   isDataStale: (key: keyof DataState['lastFetch'], maxAgeMs?: number) => boolean;
   refreshAllData: () => Promise<void>;
+  exportData: () => Promise<Blob>;
+  clearAllData: () => Promise<void>;
 }
 
 // Initial state
@@ -500,6 +502,45 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     ]);
   }, [user, refreshHealthRecords, refreshInsights, refreshHealthStats, refreshChatSessions, refreshSettings]);
 
+  // Exportar todos los datos
+  const exportData = useCallback(async (): Promise<Blob> => {
+    const data = {
+      version: '1.0',
+      exportDate: new Date().toISOString(),
+      healthRecords: state.healthRecords,
+      insights: state.insights,
+      chatSessions: state.chatSessions,
+      settings: state.settings,
+      profile: localStorage.getItem('userProfile') ? JSON.parse(localStorage.getItem('userProfile')!) : null
+    };
+    
+    const jsonStr = JSON.stringify(data, null, 2);
+    return new Blob([jsonStr], { type: 'application/json' });
+  }, [state]);
+
+  // Limpiar todos los datos
+  const clearAllData = useCallback(async () => {
+    // Limpiar localStorage
+    const keysToRemove = [
+      'healthRecords',
+      'insights',
+      'chatSessions',
+      'appSettings',
+      'userProfile',
+      'aiProcessingHistory',
+      'chatHistory'
+    ];
+    
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    
+    // Resetear estado
+    dispatch({ type: 'SET_HEALTH_RECORDS', payload: [] });
+    dispatch({ type: 'SET_INSIGHTS', payload: [] });
+    dispatch({ type: 'SET_CHAT_SESSIONS', payload: [] });
+    dispatch({ type: 'SET_SETTINGS', payload: null });
+    dispatch({ type: 'SET_HEALTH_STATS', payload: null });
+  }, [dispatch]);
+
   // Auto-refresh data when user changes or on mount
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -551,7 +592,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     refreshHealthStats,
     getSmartContext,
     isDataStale,
-    refreshAllData
+    refreshAllData,
+    exportData,
+    clearAllData
   };
 
   return (

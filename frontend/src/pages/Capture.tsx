@@ -4,7 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import apiService from '../services/apiService';
 import SchemaService from '../services/schemas';
-import { aiCoordinator, type ProcessingResult } from '../services/aiAgents';
+import { contextAwareAI } from '../services/aiCoordinator';
+import { saveHealthRecord } from '../services/databaseService';
 import '../styles/Capture.css';
 
 interface CaptureData {
@@ -54,7 +55,7 @@ const Capture: React.FC = () => {
   const [customDate, setCustomDate] = useState<string>('');
   
   // Multi-agent AI state
-  const [aiProcessingResult, setAiProcessingResult] = useState<ProcessingResult | null>(null);
+  const [aiProcessingResult, setAiProcessingResult] = useState<any | null>(null);
   const [showClarificationDialog, setShowClarificationDialog] = useState(false);
   const [userResponses, setUserResponses] = useState<{[question: string]: string}>({});
   
@@ -252,14 +253,19 @@ const Capture: React.FC = () => {
     setProcessError(null);
     setShowPreview(false);
     
-    try {
-      console.log('🚀 Iniciando procesamiento multi-agente');
-      
-      // Usar el coordinador de IA multi-agente con metadata
-      const result = await aiCoordinator.processInput(
-        captureData.input,
-        captureData.metadata
-      );
+          try {
+        console.log('🚀 Iniciando procesamiento multi-agente');
+        
+        // Configurar callback para mostrar pasos de procesamiento
+        contextAwareAI.setStepUpdateCallback((step) => {
+          console.log(`🤖 ${step.agent}: ${step.action}`);
+        });
+        
+        // Usar el coordinador de IA multi-agente con metadata
+        const result = await contextAwareAI.processWithContext(
+          captureData.input,
+          captureData.metadata
+        );
       
       console.log('📊 Resultado del procesamiento:', result);
       
@@ -289,7 +295,7 @@ const Capture: React.FC = () => {
   }, [captureData]);
 
   // Procesar resultado de IA
-  const processAiResult = async (result: ProcessingResult) => {
+  const processAiResult = async (result: any) => {
     const { finalData } = result;
     
     // Convertir a formato ExtractedData
@@ -323,7 +329,7 @@ const Capture: React.FC = () => {
   };
 
   // Generar notas inteligentes basadas en el análisis
-  const generateNotes = (result: ProcessingResult): string => {
+  const generateNotes = (result: any): string => {
     const notes: string[] = [];
     const { finalData } = result;
     
@@ -358,12 +364,14 @@ const Capture: React.FC = () => {
     
     setIsProcessing(true);
     try {
-      // Re-procesar con las respuestas del usuario
-      const enhancedResult = await aiCoordinator.processUserResponse(
-        captureData.input,
-        userResponses,
-        aiProcessingResult
-      );
+              // Re-procesar con las respuestas del usuario
+        const enhancedInput = captureData.input + '\n\nRespuestas adicionales:\n' + 
+          Object.entries(userResponses).map(([q, a]) => `${q}: ${a}`).join('\n');
+        
+        const enhancedResult = await contextAwareAI.processWithContext(
+          enhancedInput,
+          { ...captureData.metadata, userResponses }
+        );
       
       await processAiResult(enhancedResult);
     } catch (error: any) {
@@ -930,3 +938,4 @@ const Capture: React.FC = () => {
 };
 
 export default Capture;
+export { Capture };
