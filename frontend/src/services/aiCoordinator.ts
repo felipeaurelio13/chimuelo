@@ -309,7 +309,7 @@ export class ContextAwareAICoordinator {
     // Guardar en historial de conversación
     this.conversationState.conversationHistory.push({
       timestamp: new Date(),
-      topic: result.extractedData?.type || 'general',
+      topic: result.finalData?.type || 'general',
       data: result
     });
 

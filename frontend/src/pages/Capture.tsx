@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import apiService from '../services/apiService';
 import SchemaService from '../services/schemas';
-import { contextAwareAI } from '../services/aiCoordinator';
+import { contextAwareAICoordinator as contextAwareAI } from '../services/aiCoordinator';
 import { type HealthRecord } from '../services/databaseService';
 import '../styles/Capture.css';
 
@@ -386,16 +386,16 @@ const Capture: React.FC = () => {
         }
         
         // Configurar callback para mostrar pasos de procesamiento
-        contextAwareAI.setStepUpdateCallback((step) => {
+        contextAwareAI.setStepUpdateCallback((step: any) => {
           if (import.meta.env.VITE_DEV === 'TRUE') {
-            console.log(`🤖 ${step.agent}: ${step.action}`);
+            console.log(`🤖 ${step.agent || 'AI'}: ${step.description || step.action || 'Processing'}`);
           }
         });
         
         // Usar el coordinador de IA multi-agente con metadata
         const result = await contextAwareAI.processWithContext(
           captureData.input,
-          captureData.metadata
+          captureData.metadata as any
         );
       
       if (import.meta.env.VITE_DEV === 'TRUE') {
@@ -519,7 +519,7 @@ const Capture: React.FC = () => {
         }
         const enhancedResult = await contextAwareAI.processWithContext(
           enhancedInput,
-          { ...captureData.metadata, userResponses }
+          { ...captureData.metadata, userResponses } as any
         );
       
       await processAiResult(enhancedResult);
