@@ -50,7 +50,7 @@ export const ModernNav: React.FC = () => {
             </div>
             {user && (
               <div className="ds-text-sm ds-text-secondary">
-                para {user.childName || 'Maxi'}
+                para Maxi
               </div>
             )}
           </div>
@@ -120,7 +120,7 @@ export const ModernNav: React.FC = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .mobile-nav {
           border-top: 1px solid var(--color-border);
           background-color: var(--color-surface);

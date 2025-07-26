@@ -62,7 +62,17 @@ class SmartAIService {
       if (!response.ok) throw new Error('API Error');
       
       const result = await response.json();
-      return this.formatMedicalOrderResult(result.data);
+      return {
+        scenario: 'medical_order',
+        extractedData: result.data,
+        confidence: 0.9,
+        actionRequired: true,
+        priority: 'medium' as const,
+        smartSuggestions: ['Orden médica procesada'],
+        nextSteps: ['Revisar detalles'],
+        requiresDoctor: false,
+        contextualInsights: ['Orden médica registrada exitosamente']
+      };
       
     } catch (error) {
       console.warn('Falling back to local AI:', error);

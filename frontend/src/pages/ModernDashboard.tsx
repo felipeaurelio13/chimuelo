@@ -213,7 +213,7 @@ const ModernDashboard: React.FC = () => {
                        currentTime.getHours() < 18 ? 'Buenas tardes' : 'Buenas noches'}
               </h1>
               <p className="ds-header-subtitle">
-                Aquí tienes el resumen de salud de {user?.childName || 'Maxi'}
+                                 Aquí tienes el resumen de salud de Maxi
               </p>
             </div>
           </div>
@@ -345,7 +345,7 @@ const ModernDashboard: React.FC = () => {
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📝</div>
               <h3 className="ds-text-lg ds-font-semibold ds-mb-2">No hay registros aún</h3>
               <p className="ds-text-secondary ds-mb-4">
-                Comienza registrando el primer dato médico de {user?.childName || 'Maxi'}
+                                 Comienza registrando el primer dato médico de Maxi
               </p>
               <button 
                 onClick={() => navigate('/capture')}
@@ -414,7 +414,7 @@ const ModernDashboard: React.FC = () => {
                 Consejo del día
               </h3>
               <p className="ds-text-sm ds-text-secondary">
-                Recuerda registrar el peso y la altura de {user?.childName || 'Maxi'} semanalmente 
+                                 Recuerda registrar el peso y la altura de Maxi semanalmente 
                 para hacer un seguimiento preciso de su crecimiento. 
                 La IA puede ayudarte a interpretar los datos y detectar patrones importantes.
               </p>

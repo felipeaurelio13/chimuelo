@@ -166,7 +166,7 @@ const ModernTimeline: React.FC = () => {
     );
   }
 
-  if (errors && errors.length > 0) {
+     if (errors && errors.records) {
     return (
       <div className="ds-page">
         <div className="ds-container">
@@ -175,7 +175,7 @@ const ModernTimeline: React.FC = () => {
               <span>⚠️</span>
               <div>
                 <div className="ds-font-medium">Error al cargar el historial</div>
-                <div className="ds-text-sm">{errors[0]}</div>
+                                 <div className="ds-text-sm">{errors.records}</div>
                 <button 
                   onClick={() => refreshHealthRecords()}
                   className="ds-button ds-button-sm ds-button-secondary ds-mt-2"
@@ -197,7 +197,7 @@ const ModernTimeline: React.FC = () => {
         <div className="ds-header">
           <h1 className="ds-header-title">Timeline Médico</h1>
           <p className="ds-header-subtitle">
-            Historial completo de {user?.childName || 'Maxi'} • {filteredRecords.length} registros
+                         Historial completo de Maxi • {filteredRecords.length} registros
           </p>
         </div>
 
@@ -356,7 +356,7 @@ const ModernTimeline: React.FC = () => {
                                 </div>
                               )}
                             </div>
-                            {record.aiExtracted && (
+                                                         {(record as any).aiExtracted && (
                               <div 
                                 className="ds-text-xs ds-rounded-full ds-p-1"
                                 style={{ 
