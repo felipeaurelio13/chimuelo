@@ -5,6 +5,7 @@ import { useData } from '../contexts/DataContext';
 import apiService from '../services/apiService';
 import SchemaService from '../services/schemas';
 import { contextAwareAICoordinator as contextAwareAI } from '../services/aiCoordinator';
+import { smartAIService, type SmartAnalysisResult, type InputContext } from '../services/smartAIService';
 import { type HealthRecord } from '../services/databaseService';
 import '../styles/Capture.css';
 
@@ -391,6 +392,125 @@ const Capture: React.FC = () => {
             cleanInput.includes('fiebre') || cleanInput.includes('peso') || cleanInput.includes('altura') ||
             cleanInput.length >= 20);
   }, []);
+
+  // 🧠 NEW: Smart AI Processing with 10 Optimized Scenarios
+  const processWithSmartAI = useCallback(async () => {
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('Capture: Smart AI processing initiated.');
+    }
+    
+    if (!captureData.input.trim() && !captureData.file) {
+      setProcessError('Por favor ingresa texto o adjunta un archivo');
+      return;
+    }
+
+    setIsProcessing(true);
+    setProcessError(null);
+    setShowPreview(false);
+
+    try {
+      const context: InputContext = {
+        childAge: 24, // Default 2 years - should come from user profile
+        childName: 'Maxi',
+        previousData: [], // Should come from database
+        currentDate: new Date().toISOString(),
+        location: 'Home'
+      };
+
+      let result: SmartAnalysisResult;
+
+      // Determine scenario and process accordingly
+      if (captureData.file) {
+        if (captureData.file.type.startsWith('image/')) {
+          if (captureData.input.includes('receta') || captureData.input.includes('prescription')) {
+            result = await smartAIService.analyzePrescription(captureData.file, context);
+          } else if (captureData.input.includes('orden') || captureData.input.includes('medical order')) {
+            result = await smartAIService.analyzeMedicalOrder(captureData.file, context);
+          } else {
+            result = await smartAIService.analyzeSymptomPhoto(captureData.file, context);
+          }
+        } else if (captureData.file.type === 'application/pdf') {
+          if (captureData.input.includes('resultado') || captureData.input.includes('examen')) {
+            result = await smartAIService.analyzeLabResults(captureData.file, context);
+          } else {
+            result = await smartAIService.analyzeMedicalOrder(captureData.file, context);
+          }
+        } else if (captureData.file.type.startsWith('audio/')) {
+          if (captureData.input.includes('consulta') || captureData.input.includes('doctor')) {
+            result = await smartAIService.analyzeConsultationAudio(captureData.file, context);
+          } else {
+            result = await smartAIService.analyzeAudioSymptoms(captureData.file, context);
+          }
+        } else {
+          throw new Error('Tipo de archivo no soportado');
+        }
+      } else {
+        // Text-based analysis
+        const input = captureData.input.toLowerCase();
+        
+        if (input.includes('cm') || input.includes('altura') || input.includes('mide')) {
+          result = await smartAIService.analyzeHeightMeasurement(captureData.input, context);
+        } else if (input.includes('paracetamol') || input.includes('medicamento') || input.includes('dosis')) {
+          result = await smartAIService.analyzeMedicationRecord(captureData.input, context);
+        } else if (input.includes('fiebre') || input.includes('temperatura') || input.includes('caliente')) {
+          result = await smartAIService.analyzeFeverDetection(captureData.input, context);
+        } else if (input.includes('comió') || input.includes('ml') || input.includes('alimentación')) {
+          result = await smartAIService.analyzeFeedingRecord(captureData.input, context);
+        } else {
+          // Default to general symptoms analysis
+          const audioBlob = new Blob([captureData.input], { type: 'text/plain' });
+          const audioFile = new File([audioBlob], 'text-input.txt', { type: 'text/plain' });
+          result = await smartAIService.analyzeAudioSymptoms(audioFile, context);
+        }
+      }
+
+      // Convert SmartAnalysisResult to ExtractedData format
+      const extractedData: ExtractedData = {
+        type: result.extractedData.type || result.scenario,
+        confidence: result.confidence,
+        timestamp: result.extractedData.timestamp || new Date().toISOString(),
+        data: result.extractedData,
+        notes: `🧠 Análisis Inteligente:\n\n` +
+               `Escenario: ${result.scenario}\n` +
+               `Confianza: ${Math.round(result.confidence * 100)}%\n` +
+               `Prioridad: ${result.priority}\n\n` +
+               `💡 Sugerencias:\n${result.smartSuggestions.map(s => `• ${s}`).join('\n')}\n\n` +
+               `📋 Próximos pasos:\n${result.nextSteps.map(s => `• ${s}`).join('\n')}\n\n` +
+               `🔍 Insights:\n${result.contextualInsights.map(s => `• ${s}`).join('\n')}`,
+        requiresAttention: result.actionRequired
+      };
+
+      setExtractedData(extractedData);
+      setShowPreview(true);
+
+      // Set custom date if available
+      if (result.extractedData.date) {
+        const extractedDate = new Date(result.extractedData.date);
+        setCustomDate(extractedDate.toISOString().split('T')[0]);
+      }
+
+      // Validate the result
+      const validationResult = validateExtractedData(extractedData);
+      setValidation(validationResult);
+
+      // Show alerts for high priority items
+      if (result.priority === 'urgent') {
+        alert(`🚨 URGENTE: ${result.contextualInsights[0]}\n\n${result.requiresDoctor ? 'Se recomienda consultar con un médico inmediatamente.' : ''}`);
+      } else if (result.priority === 'high') {
+        alert(`⚠️ ALTA PRIORIDAD: ${result.contextualInsights[0]}\n\n${result.requiresDoctor ? 'Se recomienda consultar con un pediatra.' : ''}`);
+      }
+
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Capture: Smart AI processing completed:', result);
+      }
+
+    } catch (error: unknown) {
+      console.error('Smart AI processing error:', error);
+      setProcessError(error instanceof Error ? error.message : 'Error en el análisis inteligente');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [captureData, validateExtractedData]);
 
   // Process with multi-agent AI
   const processWithAI = useCallback(async () => {
@@ -918,12 +1038,52 @@ const Capture: React.FC = () => {
             </div>
           )}
 
+          {/* Smart AI Button - NEW: 10 Optimized Scenarios */}
+          <div className="smart-scenarios-section">
+            <h4>🧠 Análisis Inteligente</h4>
+            <p>El sistema detecta automáticamente el tipo de información y aplica el análisis más adecuado:</p>
+            
+            <div className="scenario-examples">
+              <div className="scenario-grid">
+                <div className="scenario-item">📊 Orden médica</div>
+                <div className="scenario-item">💊 Recetas</div>
+                <div className="scenario-item">🎙️ Audio síntomas</div>
+                <div className="scenario-item">🩺 Consulta médica</div>
+                <div className="scenario-item">📄 Resultados lab</div>
+                <div className="scenario-item">📏 Medición altura</div>
+                <div className="scenario-item">📸 Fotos síntomas</div>
+                <div className="scenario-item">💊 Medicamentos</div>
+                <div className="scenario-item">🌡️ Fiebre</div>
+                <div className="scenario-item">🍼 Alimentación</div>
+              </div>
+            </div>
+          </div>
+
           {/* Process Button con diseño mejorado */}
           <div className="action-buttons elegant">
+            <button
+              className={`smart-process-button ${captureData.input.trim() || captureData.file ? 'ready' : ''} ${isProcessing ? 'processing' : ''}`}
+              onClick={processWithSmartAI}
+              disabled={(!captureData.input.trim() && !captureData.file) || isProcessing}
+            >
+              {isProcessing ? (
+                <>
+                  <span className="spinner"></span>
+                  <span>Analizando inteligentemente...</span>
+                </>
+              ) : (
+                <>
+                  <span className="button-icon">🚀</span>
+                  <span>Análisis Inteligente</span>
+                </>
+              )}
+            </button>
+
             <button
               className={`process-button ${captureData.input.trim() ? 'ready' : ''} ${isProcessing ? 'processing' : ''}`}
               onClick={processWithAI}
               disabled={!captureData.input.trim() || isProcessing}
+              style={{ opacity: 0.7, fontSize: '0.9em' }}
             >
               {isProcessing ? (
                 <>
@@ -933,7 +1093,7 @@ const Capture: React.FC = () => {
               ) : (
                 <>
                   <span className="button-icon">🧠</span>
-                  <span>Procesar con IA</span>
+                  <span>IA Multi-Agente (Avanzado)</span>
                 </>
               )}
             </button>
