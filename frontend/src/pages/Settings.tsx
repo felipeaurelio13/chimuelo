@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import '../styles/Settings.css';
 
@@ -18,7 +19,6 @@ interface AppSettingsConfig {
   temperatureUnit: 'celsius' | 'fahrenheit';
   language: 'es' | 'en';
   notifications: boolean;
-  theme: 'light' | 'dark' | 'system';
 }
 
 const Settings: React.FC = () => {
@@ -29,6 +29,7 @@ const Settings: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { exportData, clearAllData } = useData();
+  const { theme, setTheme } = useTheme();
 
   const [activeSection, setActiveSection] = useState<'profile' | 'appearance' | 'data' | 'about'>('profile');
   const [profile, setProfile] = useState<UserProfile>({
@@ -43,7 +44,6 @@ const Settings: React.FC = () => {
     temperatureUnit: 'celsius',
     language: 'es',
     notifications: true,
-    theme: 'system',
   });
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
@@ -236,36 +236,37 @@ const Settings: React.FC = () => {
 
   // Helper for theme icon
   const getThemeIcon = useCallback(() => {
-    switch (settings.theme) {
+    switch (theme) {
       case 'light': return '☀️';
       case 'dark': return '🌙';
       case 'system': return '🖥️';
       default: return '🎨';
     }
-  }, [settings.theme]);
+  }, [theme]);
 
   // Helper for theme label
   const getThemeLabel = useCallback(() => {
-    switch (settings.theme) {
+    switch (theme) {
       case 'light': return 'Claro';
       case 'dark': return 'Oscuro';
       case 'system': return 'Sistema';
       default: return 'Tema';
     }
-  }, [settings.theme]);
+  }, [theme]);
 
   const cycleTheme = useCallback(() => {
     if (import.meta.env.VITE_DEV === 'TRUE') {
-      console.log('Settings: Cycling theme.');
+      console.log('Settings: Cycling theme from:', theme);
     }
-    const themes: AppSettingsConfig['theme'][] = ['light', 'dark', 'system'];
-    const currentIndex = themes.indexOf(settings.theme);
+    const themes: ('light' | 'dark' | 'system')[] = ['light', 'dark', 'system'];
+    const currentIndex = themes.indexOf(theme);
     const nextIndex = (currentIndex + 1) % themes.length;
-    setSettings(prev => ({ ...prev, theme: themes[nextIndex] }));
+    const nextTheme = themes[nextIndex];
+    setTheme(nextTheme);
     if (import.meta.env.VITE_DEV === 'TRUE') {
-      console.log('Settings: Theme cycled to:', themes[nextIndex]);
+      console.log('Settings: Theme cycled to:', nextTheme);
     }
-  }, [settings.theme]);
+  }, [theme, setTheme]);
 
   return (
     <div className="settings-page">
@@ -351,6 +352,7 @@ const Settings: React.FC = () => {
                 <input
                   id="babyName"
                   type="text"
+                  className="input"
                   value={profile.babyName || ''}
                   onChange={(e) => {
                     setProfile({ ...profile, babyName: e.target.value });
@@ -367,6 +369,7 @@ const Settings: React.FC = () => {
                 <input
                   id="birthDate"
                   type="date"
+                  className="input"
                   value={profile.birthDate || ''}
                   onChange={(e) => {
                     setProfile({ ...profile, birthDate: e.target.value });
@@ -384,6 +387,7 @@ const Settings: React.FC = () => {
                     id="birthWeight"
                     type="number"
                     step="0.01"
+                    className="input"
                     value={profile.birthWeight || ''}
                     onChange={(e) => {
                       setProfile({ ...profile, birthWeight: parseFloat(e.target.value) || undefined });
@@ -401,6 +405,7 @@ const Settings: React.FC = () => {
                     id="birthHeight"
                     type="number"
                     step="0.1"
+                    className="input"
                     value={profile.birthHeight || ''}
                     onChange={(e) => {
                       setProfile({ ...profile, birthHeight: parseFloat(e.target.value) || undefined });
@@ -413,7 +418,7 @@ const Settings: React.FC = () => {
                 </div>
               </div>
 
-              <button className="btn-primary" onClick={saveProfile}>
+              <button className="btn btn-primary" onClick={saveProfile}>
                 Guardar perfil
               </button>
             </section>
@@ -432,18 +437,18 @@ const Settings: React.FC = () => {
                   <h3>Tema de la aplicación</h3>
                   <p>Elige entre modo claro, oscuro o automático</p>
                 </div>
-                <button className="theme-toggle" onClick={cycleTheme}>
+                <button className="theme-toggle btn btn-secondary" onClick={cycleTheme}>
                   <span className="theme-icon">{getThemeIcon()}</span>
                   <span className="theme-label">{getThemeLabel()}</span>
                 </button>
               </div>
 
-              <div className="theme-preview">
+              <div className="theme-preview card">
                 <div className="preview-card">
-                  <div className="preview-header">Vista previa</div>
+                  <div className="preview-header">Vista previa - Tema {getThemeLabel()}</div>
                   <div className="preview-content">
                     <div className="preview-text">Este es un texto de ejemplo</div>
-                    <button className="preview-button">Botón de muestra</button>
+                    <button className="preview-button btn btn-primary">Botón de muestra</button>
                   </div>
                 </div>
               </div>
@@ -460,6 +465,7 @@ const Settings: React.FC = () => {
                   <label htmlFor="weightUnit">Peso</label>
                   <select
                     id="weightUnit"
+                    className="input"
                     value={settings.weightUnit}
                     onChange={(e) => {
                       setSettings({ ...settings, weightUnit: e.target.value as 'kg' | 'lb' });
@@ -477,6 +483,7 @@ const Settings: React.FC = () => {
                   <label htmlFor="heightUnit">Altura</label>
                   <select
                     id="heightUnit"
+                    className="input"
                     value={settings.heightUnit}
                     onChange={(e) => {
                       setSettings({ ...settings, heightUnit: e.target.value as 'cm' | 'in' });
@@ -494,6 +501,7 @@ const Settings: React.FC = () => {
                   <label htmlFor="temperatureUnit">Temperatura</label>
                   <select
                     id="temperatureUnit"
+                    className="input"
                     value={settings.temperatureUnit}
                     onChange={(e) => {
                       setSettings({ ...settings, temperatureUnit: e.target.value as 'celsius' | 'fahrenheit' });
@@ -521,12 +529,12 @@ const Settings: React.FC = () => {
                     if (import.meta.env.VITE_DEV === 'TRUE') {
                       console.log('Settings: Notifications toggled to:', e.target.checked);
                     }
-                    saveSettings(); // Assuming saveSettings should be called
+                    saveSettings();
                   }}
                 />
               </div>
 
-              <button className="btn-primary" onClick={saveSettings}>
+              <button className="btn btn-primary" onClick={saveSettings}>
                 Guardar configuración
               </button>
             </section>
@@ -541,20 +549,20 @@ const Settings: React.FC = () => {
               </p>
 
               <div className="data-actions">
-                <div className="action-card">
+                <div className="action-card card">
                   <div className="action-icon">📤</div>
                   <h3>Exportar datos</h3>
                   <p>Descarga todos tus datos en formato JSON</p>
-                  <button className="btn-secondary" onClick={handleExportData}>
+                  <button className="btn btn-secondary" onClick={handleExportData}>
                     Exportar
                   </button>
                 </div>
 
-                <div className="action-card">
+                <div className="action-card card">
                   <div className="action-icon">📥</div>
                   <h3>Importar datos</h3>
                   <p>Restaura datos desde un archivo de respaldo</p>
-                  <label className="btn-secondary">
+                  <label className="btn btn-secondary">
                     Importar
                     <input
                       type="file"
@@ -566,12 +574,12 @@ const Settings: React.FC = () => {
                   </label>
                 </div>
 
-                <div className="action-card danger">
+                <div className="action-card danger card">
                   <div className="action-icon">🗑️</div>
                   <h3>Borrar todos los datos</h3>
                   <p>Elimina permanentemente todos los datos</p>
                   <button 
-                    className="btn-danger" 
+                    className="btn btn-danger" 
                     onClick={handleClearData}
                   >
                     Borrar datos
@@ -579,7 +587,7 @@ const Settings: React.FC = () => {
                 </div>
               </div>
 
-              <div className="privacy-info">
+              <div className="privacy-info card">
                 <h3>🔒 Tu privacidad importa</h3>
                 <ul>
                   <li>Todos los datos se almacenan localmente en tu dispositivo</li>
@@ -594,18 +602,18 @@ const Settings: React.FC = () => {
           {/* Sección Acerca de */}
           {activeSection === 'about' && (
             <section className="settings-section">
-              <h2>Acerca de Maxi</h2>
+              <h2>Acerca de Chimuelo</h2>
               
-              <div className="about-content">
+              <div className="about-content card">
                 <div className="app-info">
                   <div className="app-icon">👶</div>
-                  <h3>Maxi Health Tracker</h3>
+                  <h3>Chimuelo Health Tracker</h3>
                   <p className="version">Versión 1.0.0</p>
                 </div>
 
                 <div className="about-description">
                   <p>
-                    Maxi es una aplicación diseñada con amor para ayudarte a hacer seguimiento 
+                    Chimuelo es una aplicación diseñada con amor para ayudarte a hacer seguimiento 
                     de la salud y desarrollo de tu bebé de manera simple e inteligente.
                   </p>
                   
@@ -621,27 +629,19 @@ const Settings: React.FC = () => {
 
                 <div className="credits">
                   <p>Hecho con ❤️ para padres modernos</p>
-                  <p className="copyright">© 2024 Maxi. Todos los derechos reservados.</p>
+                  <p className="copyright">© 2025 Chimuelo. Todos los derechos reservados.</p>
                 </div>
               </div>
-            </section>
-          )}
 
-          {/* Danger Zone: Logout and Delete Account are here for consistency with original. */}
-          {/* The screenshot suggests these are top-level buttons, but the CSS has 'logout-section' and 'btn-logout' */}
-          {/* Given the section names in CSS, I'll place these within a dedicated section or keep them in 'about' if that's the current structure. */}
-          {/* For now, integrating them into the 'about' section as shown in the original CSS structure for logout. */}
-          {/* The screenshot shows them outside sections. I'll follow the CSS structure to fix styling. */}
-          {activeSection === 'about' && (
-            <section className="settings-section">
               <div className="logout-section">
-                <button className="btn-logout" onClick={handleLogout}>
+                <button className="btn btn-secondary" onClick={handleLogout}>
                   Cerrar sesión
                 </button>
               </div>
+              
               <div className="danger-zone">
                 <h3>Zona de Peligro</h3>
-                <button className="settings-option-button delete-account-button" onClick={() => {
+                <button className="btn btn-danger" onClick={() => {
                   if (import.meta.env.VITE_DEV === 'TRUE') {
                     console.log('Settings: Delete account button clicked.');
                   }
