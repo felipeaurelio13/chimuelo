@@ -24,6 +24,9 @@ interface OpenAIResponse {
 class OpenAIService {
   private config: OpenAIConfig;
   private baseUrl = 'https://api.openai.com/v1';
+  private lastRequestTime: number = 0;
+  private minRequestInterval: number = 2000; // 2 segundos entre requests
+  private isQuotaExceeded: boolean = false;
   
   constructor() {
     // Obtener API key de variables de entorno
@@ -54,6 +57,25 @@ class OpenAIService {
         error: 'OpenAI no está configurado. Usando procesamiento local.'
       };
     }
+
+    // Verificar si la quota fue excedida anteriormente
+    if (this.isQuotaExceeded) {
+      console.warn('🚨 OpenAI quota excedida. Usando fallback local.');
+      return {
+        success: false,
+        error: 'Quota de OpenAI excedida. Usa el procesamiento local.'
+      };
+    }
+
+    // Rate limiting: esperar tiempo mínimo entre requests
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    if (timeSinceLastRequest < this.minRequestInterval) {
+      const waitTime = this.minRequestInterval - timeSinceLastRequest;
+      console.log(`⏳ Rate limiting: esperando ${waitTime}ms`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    this.lastRequestTime = Date.now();
     
     try {
       const messages = [
@@ -90,6 +112,13 @@ class OpenAIService {
       
       if (!response.ok) {
         const error = await response.json();
+        
+        // Detectar quota exceeded (429) y marcar como excedida
+        if (response.status === 429 || error.error?.code === 'quota_exceeded') {
+          this.isQuotaExceeded = true;
+          console.error('🚨 Quota de OpenAI excedida. Cambiando a modo local.');
+        }
+        
         throw new Error(error.error?.message || 'Error al llamar a OpenAI');
       }
       

@@ -36,6 +36,23 @@ interface ValidationResult {
   warnings: string[];
 }
 
+// Hook personalizado para debouncing
+const useDebounce = (value: string, delay: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
 const Capture: React.FC = () => {
   if (import.meta.env.VITE_DEV === 'TRUE') {
     console.log('Capture component rendered.');
@@ -76,6 +93,9 @@ const Capture: React.FC = () => {
   // Smart suggestions
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [detectedType, setDetectedType] = useState<string>('note');
+  
+  // Debounce input para reducir re-renders y API calls
+  const debouncedInput = useDebounce(captureData.input, 500); // 500ms delay
 
   // Generar notas inteligentes basadas en el análisis
   const generateNotes = (result: any): string => {
@@ -363,6 +383,15 @@ const Capture: React.FC = () => {
     }
   }, [isRecording]);
 
+  // Verificar si el input es suficiente para procesamiento IA
+  const isInputReadyForAI = useCallback((input: string): boolean => {
+    const cleanInput = input.trim();
+    return cleanInput.length >= 10 && 
+           (cleanInput.includes('cm') || cleanInput.includes('kg') || cleanInput.includes('temperatura') || 
+            cleanInput.includes('fiebre') || cleanInput.includes('peso') || cleanInput.includes('altura') ||
+            cleanInput.length >= 20);
+  }, []);
+
   // Process with multi-agent AI
   const processWithAI = useCallback(async () => {
     if (import.meta.env.VITE_DEV === 'TRUE') {
@@ -373,6 +402,12 @@ const Capture: React.FC = () => {
       if (import.meta.env.VITE_DEV === 'TRUE') {
         console.warn('Capture: Process with AI aborted due to empty input.');
       }
+      return;
+    }
+
+    // Verificar si el input es suficiente para IA
+    if (!isInputReadyForAI(captureData.input)) {
+      setProcessError('Proporciona más información específica (medidas, síntomas, etc.) para un mejor análisis con IA.');
       return;
     }
     
@@ -440,15 +475,15 @@ const Capture: React.FC = () => {
         console.log('Capture: AI processing finished.');
       }
     }
-  }, [captureData, processAiResult]);
+  }, [captureData, processAiResult, isInputReadyForAI]);
 
-  // Update suggestions based on input
+  // Update suggestions based on debounced input
   useEffect(() => {
     if (import.meta.env.VITE_DEV === 'TRUE') {
-      console.log('Capture: Input data changed, updating suggestions/detected type.', captureData.input.length);
+      console.log('Capture: Debounced input changed, updating suggestions/detected type.', debouncedInput.length);
     }
-    if (captureData.input.length > 10) {
-      const inputLower = captureData.input.toLowerCase();
+    if (debouncedInput.length > 10) {
+      const inputLower = debouncedInput.toLowerCase();
       const newSuggestions: string[] = [];
       
       // Smart suggestions based on content
@@ -484,7 +519,7 @@ const Capture: React.FC = () => {
         console.log('Capture: Input too short for suggestions, resetting.');
       }
     }
-  }, [captureData.input]);
+  }, [debouncedInput]);
 
   // Handle text input change
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
