@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
 import { ThemeProvider, ThemeScript } from './contexts/ThemeContext';
 import { LoadingScreen } from './components/LoadingScreen';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Capture from './pages/Capture';
 import Timeline from './pages/Timeline';
@@ -19,8 +20,8 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  // Esta lógica será manejada por AuthContext
-  return <>{children}</>;
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
 function AppContent() {
@@ -42,6 +43,7 @@ function AppContent() {
       <div className="app-container">
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route path="/" element={
             <ProtectedRoute>
               <Dashboard />
