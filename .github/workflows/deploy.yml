@@ -68,60 +68,24 @@ jobs:
           cd worker
           npm ci
 
-      - name: Deploy Worker
+      - name: Deploy Worker with Secrets
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
           cd worker
           
-          # Verify secrets are available
-          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "❌ CLOUDFLARE_API_TOKEN is not set"
-            exit 1
-          fi
-          
-          if [ -z "$OPENAI_API_KEY" ]; then
-            echo "❌ OPENAI_API_KEY is not set"
-            exit 1
-          fi
-          
-          if [ -z "$JWT_SECRET" ]; then
-            echo "❌ JWT_SECRET is not set"
-            exit 1
-          fi
-          
-          echo "✅ All secrets are configured"
-          
-          # Verify Cloudflare token first
-          echo "🔍 Verifying Cloudflare API token..."
-          if ! curl -s -X GET "https://api.cloudflare.com/client/v4/user/tokens/verify" \
-               -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-               -H "Content-Type: application/json" | grep -q '"success":true'; then
-            echo "❌ Cloudflare API token verification failed!"
-            echo "🔧 Please check your CLOUDFLARE_API_TOKEN in GitHub Secrets"
-            echo "📋 The token needs these permissions:"
-            echo "   - Account: Cloudflare Workers: Edit"
-            echo "   - Account: Account: Read"
-            echo "   - Zone: Zone: Read"
-            echo "   - Zone: Zone Settings: Read"
-            echo "   - User: User Details: Read"
-            echo "🔗 Create token at: https://dash.cloudflare.com/profile/api-tokens"
-            exit 1
-          fi
-          echo "✅ Cloudflare API token verified"
-          
-          # Set secrets in Wrangler
-          echo "📡 Setting OpenAI API key..."
-          echo "$OPENAI_API_KEY" | npx wrangler secret put OPENAI_API_KEY
-          
-          echo "🔐 Setting JWT secret..."
-          echo "$JWT_SECRET" | npx wrangler secret put JWT_SECRET
-          
-          # Deploy worker
+          # Deploy worker first
           echo "🚀 Deploying worker..."
           npx wrangler deploy
+          
+          # Then set secrets
+          echo "📡 Setting OpenAI API key..."
+          echo "${{ secrets.OPENAI_API_KEY }}" | npx wrangler secret put OPENAI_API_KEY
+          
+          echo "🔐 Setting JWT secret..."
+          echo "${{ secrets.JWT_SECRET }}" | npx wrangler secret put JWT_SECRET
+          
+          echo "✅ Worker deployment completed!"
 
   deploy:
     environment:
