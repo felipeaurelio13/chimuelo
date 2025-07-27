@@ -71,8 +71,34 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
           cd worker
-          echo "$OPENAI_API_KEY" | npx wrangler secret put OPENAI_API_KEY --compatibility-date=2025-01-01
-          echo "$JWT_SECRET" | npx wrangler secret put JWT_SECRET --compatibility-date=2025-01-01
+          
+          # Verify secrets are available
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "❌ CLOUDFLARE_API_TOKEN is not set"
+            exit 1
+          fi
+          
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "❌ OPENAI_API_KEY is not set"
+            exit 1
+          fi
+          
+          if [ -z "$JWT_SECRET" ]; then
+            echo "❌ JWT_SECRET is not set"
+            exit 1
+          fi
+          
+          echo "✅ All secrets are configured"
+          
+          # Set secrets in Wrangler
+          echo "📡 Setting OpenAI API key..."
+          echo "$OPENAI_API_KEY" | npx wrangler secret put OPENAI_API_KEY
+          
+          echo "🔐 Setting JWT secret..."
+          echo "$JWT_SECRET" | npx wrangler secret put JWT_SECRET
+          
+          # Deploy worker
+          echo "🚀 Deploying worker..."
           npx wrangler deploy
 
   deploy:

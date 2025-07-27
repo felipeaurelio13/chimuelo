@@ -39,6 +39,26 @@ interface OpenAIChatRequest {
   };
 }
 
+interface OpenAIResponse {
+  choices: Array<{
+    message: {
+      content: string;
+    };
+  }>;
+  usage?: any;
+}
+
+interface DuckDuckGoResponse {
+  Abstract?: string;
+  Heading?: string;
+  AbstractURL?: string;
+  AbstractSource?: string;
+  RelatedTopics?: Array<{
+    Text: string;
+    FirstURL: string;
+  }>;
+}
+
 // Router setup
 const router = Router();
 
@@ -228,12 +248,12 @@ Responde en formato JSON con la estructura:
     });
     
     if (!openaiResponse.ok) {
-      const error = await openaiResponse.json();
+      const error = await openaiResponse.json() as any;
       console.error('OpenAI API Error:', error);
-      return generateErrorResponse(`OpenAI API error: ${error.error?.message || 'Unknown error'}`, openaiResponse.status);
+      return generateErrorResponse(`OpenAI API error: ${error?.error?.message || 'Unknown error'}`, openaiResponse.status);
     }
     
-    const openaiData = await openaiResponse.json();
+    const openaiData = await openaiResponse.json() as OpenAIResponse;
     let extractedData;
     
     try {
@@ -325,12 +345,12 @@ Contexto actual del bebé:`;
     });
     
     if (!openaiResponse.ok) {
-      const error = await openaiResponse.json();
+      const error = await openaiResponse.json() as any;
       console.error('OpenAI API Error:', error);
-      return generateErrorResponse(`OpenAI API error: ${error.error?.message || 'Unknown error'}`, openaiResponse.status);
+      return generateErrorResponse(`OpenAI API error: ${error?.error?.message || 'Unknown error'}`, openaiResponse.status);
     }
     
-    const openaiData = await openaiResponse.json();
+    const openaiData = await openaiResponse.json() as OpenAIResponse;
     
     return generateSuccessResponse({
       response: openaiData.choices[0].message.content,
@@ -378,7 +398,7 @@ router.get('/api/search', async (request: IRequest, env: Env) => {
       return generateErrorResponse('Search service unavailable', 503);
     }
     
-    const searchData = await searchResponse.json();
+    const searchData = await searchResponse.json() as DuckDuckGoResponse;
     
     // Parse DuckDuckGo results
     const results = [];
