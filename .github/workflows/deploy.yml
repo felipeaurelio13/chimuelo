@@ -38,6 +38,10 @@ jobs:
           cd frontend
           npm run build
 
+      - name: Add .nojekyll file
+        run: |
+          touch frontend/dist/.nojekyll
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 

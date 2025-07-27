@@ -9,9 +9,11 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
+    emptyOutDir: true,
   },
   server: {
     port: 5173,
     host: true,
   },
+  publicDir: 'public',
 })
