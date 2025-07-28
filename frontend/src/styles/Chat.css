@@ -2,13 +2,19 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f8fafc;
+  background: var(--bg-primary);
+}
+
+@media (prefers-color-scheme: dark) {
+  .chat-page {
+    background: var(--bg-primary);
+  }
 }
 
 /* Header */
 .chat-header {
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-soft);
   flex-shrink: 0;
 }
 
@@ -30,7 +36,7 @@
 }
 
 .back-button:hover {
-  background: #f3f4f6;
+  background: var(--bg-primary);
 }
 
 .chat-title {

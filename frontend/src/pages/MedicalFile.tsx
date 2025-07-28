@@ -6,7 +6,7 @@ import { BabyProfile, MedicalMilestone, FutureMilestone, MedicalSummary } from '
 import { calculateAge, formatAge } from '../utils/dateUtils';
 import { dataIntegrityService } from '../services/dataIntegrityService';
 import openaiService from '../services/openaiService';
-import AppVersion from '../components/AppVersion';
+import AppFooter from '../components/AppFooter';
 import '../styles/MedicalFile.css';
 
 interface EditProfileModalProps {
@@ -162,26 +162,9 @@ const MedicalFile: React.FC = () => {
       // Refresh health records first
       await refreshHealthRecords();
 
-      // Load or create baby profile
-      const savedProfile = localStorage.getItem(`babyProfile_${user.id}`);
-      if (savedProfile) {
-        const profile = JSON.parse(savedProfile);
-        profile.dateOfBirth = new Date(profile.dateOfBirth);
-        setBabyProfile(profile);
-      } else {
-        // Create default profile
-        const defaultProfile: BabyProfile = {
-          id: `profile_${user.id}`,
-          name: 'Maxi',
-          dateOfBirth: new Date('2024-11-01'), // Adjust as needed
-          gender: 'male',
-          allergies: [],
-          lastUpdated: new Date(),
-          confidence: 0
-        };
-        setBabyProfile(defaultProfile);
-        localStorage.setItem(`babyProfile_${user.id}`, JSON.stringify(defaultProfile));
-      }
+      // Load baby profile using centralized service
+      const profile = dataIntegrityService.getBabyProfile();
+      setBabyProfile(profile);
 
       // Convert health records to milestones
       const convertedMilestones = healthRecords.map((record: any) => ({
@@ -384,7 +367,9 @@ INSTRUCCIONES:
 
     const updated = { ...babyProfile, ...updates, lastUpdated: new Date() };
     setBabyProfile(updated);
-    localStorage.setItem(`babyProfile_${user?.id}`, JSON.stringify(updated));
+    
+    // Use centralized service to update profile
+    dataIntegrityService.setBabyProfile(updated);
   };
 
   const toggleMilestoneStatus = (id: string) => {
@@ -801,6 +786,9 @@ INSTRUCCIONES:
           </div>
         </div>
       )}
+      
+      {/* Footer */}
+      <AppFooter />
     </div>
   );
 };

@@ -4,6 +4,7 @@ import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/apiService';
 import { type ChatMessage } from '../services/databaseService';
+import AppFooter from '../components/AppFooter';
 import '../styles/Chat.css';
 
 interface ChatInputData {
@@ -465,6 +466,9 @@ const Chat: React.FC = () => {
           </button>
         </div>
       </footer>
+      
+      {/* App Footer */}
+      <AppFooter />
     </div>
   );
 };

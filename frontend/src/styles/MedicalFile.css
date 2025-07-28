@@ -2,9 +2,17 @@
 
 .medical-file {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: linear-gradient(135deg, var(--bg-primary) 0%, #F8FAFC 100%);
   padding: var(--space-4);
   font-family: var(--font-family);
+  display: flex;
+  flex-direction: column;
+}
+
+@media (prefers-color-scheme: dark) {
+  .medical-file {
+    background: linear-gradient(135deg, var(--bg-primary) 0%, #0F172A 100%);
+  }
 }
 
 /* === HEADER === */
@@ -855,6 +863,49 @@
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* === DARK MODE SUPPORT === */
+@media (prefers-color-scheme: dark) {
+  .medical-header,
+  .summary-grid .card,
+  .profile-card,
+  .milestone-item,
+  .future-milestone-card,
+  .modal-content {
+    background: var(--bg-surface);
+    border-color: var(--border-soft);
+  }
+  
+  .tab-button.active {
+    background: var(--primary-calm);
+    color: var(--bg-surface);
+  }
+  
+  .tab-button:not(.active) {
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    border-color: var(--border-soft);
+  }
+  
+  .summary-card .value {
+    color: var(--primary-calm);
+  }
+  
+  .priority-high {
+    background: color-mix(in srgb, var(--error-gentle) 15%, var(--bg-surface));
+    border-color: var(--error-gentle);
+  }
+  
+  .priority-medium {
+    background: color-mix(in srgb, var(--warning-soft) 15%, var(--bg-surface));
+    border-color: var(--warning-soft);
+  }
+  
+  .priority-low {
+    background: color-mix(in srgb, var(--success-gentle) 15%, var(--bg-surface));
+    border-color: var(--success-gentle);
   }
 }
 

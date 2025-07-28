@@ -3,6 +3,14 @@
 .dashboard {
   min-height: 100vh;
   background: linear-gradient(135deg, var(--bg-primary) 0%, #F8FAFC 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+@media (prefers-color-scheme: dark) {
+  .dashboard {
+    background: linear-gradient(135deg, var(--bg-primary) 0%, #0F172A 100%);
+  }
 }
 
 /* Header */
@@ -164,14 +172,14 @@
   flex-shrink: 0;
   width: 56px;
   height: 56px;
-  background: rgba(107, 115, 255, 0.1);
   border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, 
-    color-mix(in srgb, var(--accent-color, var(--primary-calm)) 15%, transparent),
-    color-mix(in srgb, var(--accent-color, var(--primary-calm)) 5%, transparent));
+    color-mix(in srgb, var(--accent-color, var(--primary-calm)) 15%, var(--bg-primary)),
+    color-mix(in srgb, var(--accent-color, var(--primary-calm)) 8%, var(--bg-primary)));
+  border: 1px solid color-mix(in srgb, var(--accent-color, var(--primary-calm)) 20%, var(--border-soft));
 }
 
 .action-content {

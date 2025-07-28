@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { useNavigate } from 'react-router-dom';
 import { dataIntegrityService } from '../services/dataIntegrityService';
-import AppVersion from '../components/AppVersion';
+import AppFooter from '../components/AppFooter';
 
 const getActivityIcon = (type: string): string => {
   const iconMap: Record<string, string> = {
@@ -104,7 +104,6 @@ const Dashboard: React.FC = () => {
               </p>
             </div>
             <div className="header-actions">
-              <AppVersion className="header-version" showLabel />
               <button 
                 className="btn btn-minimal"
                 onClick={logout}
@@ -217,10 +216,10 @@ const Dashboard: React.FC = () => {
         </section>
       )}
 
-      {/* Safe Area Bottom Padding */}
-      <div className="safe-area-bottom" style={{ height: 'var(--space-8)' }} />
-    </div>
-  );
-};
+             {/* Footer */}
+       <AppFooter />
+     </div>
+   );
+ };
 
-export default Dashboard;
+ export default Dashboard;

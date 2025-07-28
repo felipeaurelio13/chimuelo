@@ -1,19 +1,19 @@
 /* Global Styles - Mobile-First & Minimalist for New Parents */
 
 :root {
-  /* Calming Color Palette - Inspired by baby apps research */
-  --primary-calm: #6B73FF;      /* Soft blue for trust */
-  --primary-warm: #FF9F43;      /* Warm orange for comfort */
+  /* Light Mode - Calming Color Palette */
+  --primary-calm: #4F46E5;      /* Indigo for trust & accessibility */
+  --primary-warm: #F59E0B;      /* Amber for warmth & energy */
   --bg-primary: #FAFBFC;        /* Softest white for rest */
   --bg-surface: #FFFFFF;        /* Pure white for clarity */
-  --text-primary: #2C3E50;      /* Soft dark for readability */
-  --text-secondary: #7F8C8D;    /* Gentle gray for less important text */
-  --text-muted: #BDC3C7;        /* Light gray for hints */
-  --border-soft: #ECF0F1;       /* Almost invisible borders */
-  --success-gentle: #2ECC71;    /* Gentle green for success */
-  --warning-soft: #F39C12;      /* Soft orange for warnings */
-  --error-gentle: #E74C3C;      /* Calm red for errors */
-  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04); /* Ultra-soft shadows */
+  --text-primary: #1F2937;      /* Dark gray for optimal contrast */
+  --text-secondary: #6B7280;    /* Medium gray for secondary text */
+  --text-muted: #9CA3AF;        /* Light gray for hints */
+  --border-soft: #E5E7EB;       /* Subtle borders */
+  --success-gentle: #10B981;    /* Emerald green for success */
+  --warning-soft: #F59E0B;      /* Amber for warnings */
+  --error-gentle: #EF4444;      /* Red for errors */
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.06); /* Subtle shadows */
   
   /* Typography - Optimized for tired parent eyes */
   --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
@@ -354,11 +354,104 @@ p {
 .warning { color: var(--warning-soft); }
 .error { color: var(--error-gentle); }
 
+/* Footer Styles */
+.app-footer {
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-soft);
+  padding: var(--space-4) 0;
+  margin-top: auto;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 428px;
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.footer-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.app-name {
+  font-weight: 600;
+  color: var(--primary-calm);
+}
+
+.footer-separator {
+  opacity: 0.5;
+}
+
+.footer-love {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+@media (max-width: 480px) {
+  .footer-content {
+    flex-direction: column;
+    text-align: center;
+    gap: var(--space-1);
+  }
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Dark Mode - High Contrast & Comfortable */
+    --primary-calm: #6366F1;      /* Brighter indigo for dark backgrounds */
+    --primary-warm: #FBBF24;      /* Brighter amber for visibility */
+    --bg-primary: #0F172A;        /* Dark slate for main background */
+    --bg-surface: #1E293B;        /* Lighter slate for surfaces */
+    --text-primary: #F8FAFC;      /* Nearly white for primary text */
+    --text-secondary: #CBD5E1;    /* Light gray for secondary text */
+    --text-muted: #64748B;        /* Medium gray for muted text */
+    --border-soft: #334155;       /* Subtle borders in dark */
+    --success-gentle: #34D399;    /* Bright emerald for success */
+    --warning-soft: #FBBF24;      /* Bright amber for warnings */
+    --error-gentle: #F87171;      /* Bright red for errors */
+    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.3); /* Stronger shadows for depth */
+  }
+}
+
+/* Forced Dark Mode Class (for manual toggle) */
+.dark-mode {
+  --primary-calm: #6366F1;
+  --primary-warm: #FBBF24;
+  --bg-primary: #0F172A;
+  --bg-surface: #1E293B;
+  --text-primary: #F8FAFC;
+  --text-secondary: #CBD5E1;
+  --text-muted: #64748B;
+  --border-soft: #334155;
+  --success-gentle: #34D399;
+  --warning-soft: #FBBF24;
+  --error-gentle: #F87171;
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
 /* High Contrast Mode Support */
 @media (prefers-contrast: high) {
   :root {
     --text-primary: #000000;
     --text-secondary: #333333;
     --border-soft: #666666;
+    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+}
+
+@media (prefers-color-scheme: dark) and (prefers-contrast: high) {
+  :root {
+    --text-primary: #FFFFFF;
+    --text-secondary: #E5E7EB;
+    --border-soft: #9CA3AF;
   }
 }
