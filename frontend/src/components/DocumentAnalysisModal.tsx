@@ -1,5 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { visionAnalysisService, VisionAnalysisRequest, VisionAnalysisResult } from '../services/visionAnalysisService';
+import { multiAgentSystem, AgentInput } from '../services/multiAgentSystem';
+import { historicalDataService } from '../services/historicalDataService';
 
 interface DocumentAnalysisModalProps {
   isOpen: boolean;
@@ -76,7 +78,7 @@ const DocumentAnalysisModal: React.FC<DocumentAnalysisModalProps> = ({
     }
   };
 
-  // Analyze document
+  // Analyze document with Multi-Agent System
   const analyzeDocument = async () => {
     if (!selectedFile) return;
     
@@ -84,21 +86,82 @@ const DocumentAnalysisModal: React.FC<DocumentAnalysisModalProps> = ({
     setError(null);
     
     try {
-      const request: VisionAnalysisRequest = {
-        imageFile: selectedFile,
-        documentType: documentType
+      // 1. Crear input para el sistema multiagente
+      const agentInput: AgentInput = {
+        id: `doc_${Date.now()}`,
+        type: selectedFile.type.startsWith('image/') ? 'image' : 
+              selectedFile.type === 'application/pdf' ? 'pdf' : 'file',
+        content: selectedFile,
+        timestamp: new Date(),
+        userId: 'current_user', // TODO: obtener del contexto de auth
+        context: {
+          documentType: documentType,
+          fileName: selectedFile.name,
+          fileSize: selectedFile.size
+        }
       };
+
+      // 2. Procesar con sistema multiagente
+      console.log('🤖 Procesando con sistema multiagente:', agentInput);
+      const agentOutput = await multiAgentSystem.processInput(agentInput);
       
-      const result = await visionAnalysisService.analyzeDocument(request);
-      
-      if (result.success) {
-        onAnalysisComplete(result);
-        onClose();
-      } else {
-        setError(result.error || 'Error en el análisis');
+      // 3. Guardar datos históricos si los hay
+      if (agentOutput.historicalData) {
+        await historicalDataService.initialize();
+        for (const record of agentOutput.historicalData) {
+          await historicalDataService.saveHistoricalRecord(record);
+        }
       }
+
+      // 4. Crear resultado compatible con la interfaz existente
+      const visionResult: VisionAnalysisResult = {
+        success: true,
+        data: {
+          documentType: agentOutput.classification,
+          patientInfo: {
+            name: agentOutput.extractedData?.patientInfo?.name || 'No detectado',
+            age: agentOutput.extractedData?.patientInfo?.age || 'No detectado',
+            dateOfBirth: agentOutput.extractedData?.patientInfo?.birthDate || 'No detectado'
+          },
+          extractedData: {
+            date: agentOutput.extractedData?.date || new Date().toISOString().split('T')[0],
+            provider: agentOutput.extractedData?.provider || 'No detectado',
+            mainFindings: agentOutput.recommendations || [],
+            medications: agentOutput.extractedData?.medications || [],
+            measurements: agentOutput.extractedData?.measurements || {
+              weight: undefined,
+              height: undefined,
+              temperature: undefined,
+              other: {}
+            },
+            recommendations: agentOutput.extractedData?.recommendations || [],
+            nextAppointment: agentOutput.extractedData?.nextAppointment || undefined,
+            urgentFlags: agentOutput.extractedData?.urgentFlags || []
+          },
+          analysisNotes: {
+            confidence: agentOutput.confidence > 0.8 ? 'alto' : 
+                       agentOutput.confidence > 0.6 ? 'medio' : 'bajo',
+            allergyWarnings: agentOutput.extractedData?.allergyWarnings || [],
+            ageAppropriate: agentOutput.extractedData?.ageAppropriate || 'Sí',
+            requiresPhysicianReview: agentOutput.confidence < 0.7
+          }
+        },
+        rawResponse: JSON.stringify(agentOutput, null, 2)
+      };
+
+      console.log('✅ Análisis multiagente completado:', {
+        agent: agentOutput.agentId,
+        classification: agentOutput.classification,
+        confidence: agentOutput.confidence,
+        historicalRecords: agentOutput.historicalData?.length || 0
+      });
+
+      onAnalysisComplete(visionResult);
+      onClose();
+      
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Error desconocido');
+      console.error('❌ Error en análisis multiagente:', error);
+      setError(error instanceof Error ? error.message : 'Error en el procesamiento multiagente');
     } finally {
       setIsAnalyzing(false);
     }

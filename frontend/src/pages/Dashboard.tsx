@@ -4,6 +4,7 @@ import { useData } from '../contexts/DataContext';
 import { useNavigate } from 'react-router-dom';
 import { dataIntegrityService } from '../services/dataIntegrityService';
 import AppFooter from '../components/AppFooter';
+import MultiAgentSystemViewer from '../components/MultiAgentSystemViewer';
 
 const getActivityIcon = (type: string): string => {
   const iconMap: Record<string, string> = {
@@ -38,6 +39,7 @@ const Dashboard: React.FC = () => {
   const { state } = useData();
   const navigate = useNavigate();
   const [babyAge, setBabyAge] = useState<string>('');
+  const [showMultiAgentViewer, setShowMultiAgentViewer] = useState(false);
 
   useEffect(() => {
     // Get baby's age from data integrity service
@@ -68,6 +70,14 @@ const Dashboard: React.FC = () => {
       subtitle: 'Preguntas y consejos',
       color: 'var(--success-gentle)',
       action: () => navigate('/chat')
+    },
+    {
+      id: 'multi-agent',
+      icon: '🤖',
+      title: 'Sistema IA',
+      subtitle: 'Ver arquitectura',
+      color: 'var(--primary-vivid)',
+      action: () => setShowMultiAgentViewer(true)
     }
   ];
 
@@ -218,6 +228,12 @@ const Dashboard: React.FC = () => {
 
              {/* Footer */}
        <AppFooter />
+
+       {/* Multi-Agent System Viewer */}
+       <MultiAgentSystemViewer 
+         isOpen={showMultiAgentViewer} 
+         onClose={() => setShowMultiAgentViewer(false)} 
+       />
      </div>
    );
  };
