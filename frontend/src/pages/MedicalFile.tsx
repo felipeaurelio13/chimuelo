@@ -159,11 +159,52 @@ const MedicalFile: React.FC = () => {
 
     setIsLoading(true);
     try {
+      console.log('🔧 [DEBUG] Iniciando carga de ficha médica...');
+      
       // Refresh health records first
       await refreshHealthRecords();
+      console.log('🔧 [DEBUG] Health records refreshed');
 
-      // Load baby profile using centralized service
-      const profile = dataIntegrityService.getBabyProfile();
+      // Load baby profile using centralized service with error handling
+      let profile;
+      try {
+        profile = dataIntegrityService.getBabyProfile();
+        console.log('🔧 [DEBUG] Perfil cargado:', profile?.name || 'Sin nombre');
+        
+        // Ensure profile is never null
+        if (!profile || !profile.name) {
+          console.log('🔧 [DEBUG] Perfil inválido, creando por defecto');
+          profile = {
+            id: 'default',
+            name: 'Maxi',
+            dateOfBirth: new Date('2024-11-01'),
+            gender: 'male' as const,
+            currentWeight: 0,
+            currentHeight: 0,
+            bloodType: '',
+            allergies: [],
+            pediatrician: { name: '', phone: '', clinic: '' },
+            lastUpdated: new Date(),
+            confidence: 0
+          };
+        }
+      } catch (profileError) {
+        console.error('🔧 [DEBUG] Error cargando perfil, usando default:', profileError);
+        profile = {
+          id: 'default',
+          name: 'Maxi',
+          dateOfBirth: new Date('2024-11-01'),
+          gender: 'male' as const,
+          currentWeight: 0,
+          currentHeight: 0,
+          bloodType: '',
+          allergies: [],
+          pediatrician: { name: '', phone: '', clinic: '' },
+          lastUpdated: new Date(),
+          confidence: 0
+        };
+      }
+      
       setBabyProfile(profile);
 
       // Convert health records to milestones
@@ -189,30 +230,60 @@ const MedicalFile: React.FC = () => {
       })) as MedicalMilestone[];
 
       setMilestones(convertedMilestones);
-
-      // Load future milestones
-      loadFutureMilestones();
+      console.log('🔧 [DEBUG] Hitos convertidos:', convertedMilestones.length);
 
       // Generate summary
       generateSummary(convertedMilestones);
 
     } catch (error) {
-      console.error('Error loading medical file:', error);
+      console.error('🔧 [DEBUG] Error loading medical file:', error);
+      
+      // Ensure we always have a valid profile even on error
+      setBabyProfile({
+        id: 'default',
+        name: 'Maxi',
+        dateOfBirth: new Date('2024-11-01'),
+        gender: 'male' as const,
+        currentWeight: 0,
+        currentHeight: 0,
+        bloodType: '',
+        allergies: [],
+        pediatrician: { name: '', phone: '', clinic: '' },
+        lastUpdated: new Date(),
+        confidence: 0
+      });
     } finally {
       setIsLoading(false);
     }
-  }, [user, healthRecords, refreshHealthRecords, babyProfile?.dateOfBirth]);
+  }, [user, healthRecords, refreshHealthRecords]); // Removed babyProfile dependency to fix circular dependency
 
-  const loadFutureMilestones = () => {
-    if (!babyProfile?.dateOfBirth) return;
-
-    const birthDate = babyProfile.dateOfBirth;
+  const loadFutureMilestones = useCallback(() => {
+    console.log('🔧 [DEBUG] Cargando hitos futuros...');
+    
+    // Use safe profile data
+    const safeProfile = babyProfile || {
+      dateOfBirth: new Date('2024-11-01'),
+      name: 'Maxi'
+    };
+    
+    const birthDate = safeProfile.dateOfBirth;
     const currentAge = calculateAge(birthDate, new Date());
+    
+    console.log('🔧 [DEBUG] Edad actual calculada:', currentAge);
     
     // Generate standard milestones based on age
     const standardMilestones = generateStandardMilestones(birthDate, currentAge);
     setFutureMilestones(standardMilestones);
-  };
+    
+    console.log('🔧 [DEBUG] Hitos futuros cargados:', standardMilestones.length);
+  }, [babyProfile]);
+
+  // Load future milestones when profile is ready
+  useEffect(() => {
+    if (babyProfile && !isLoading) {
+      loadFutureMilestones();
+    }
+  }, [babyProfile, isLoading, loadFutureMilestones]);
 
   const generateStandardMilestones = (birthDate: Date, currentAge: string): FutureMilestone[] => {
     // This would be a comprehensive milestone generator
@@ -522,6 +593,7 @@ FORMATO OBLIGATORIO: Array de objetos JSON con las propiedades exactas: title, d
     setSummary(summary);
   };
 
+  // Loading state
   if (isLoading) {
     return (
       <div className="medical-file loading">
@@ -533,6 +605,38 @@ FORMATO OBLIGATORIO: Array de objetos JSON con las propiedades exactas: title, d
     );
   }
 
+  // Error state - if somehow babyProfile is still null after loading
+  if (!babyProfile) {
+    console.error('🔧 [DEBUG] babyProfile is null after loading - critical error');
+    return (
+      <div className="medical-file error">
+        <div className="error-container">
+          <h2>⚠️ Error al cargar la ficha médica</h2>
+          <p>Hubo un problema cargando los datos de Maxi.</p>
+          <button 
+            className="btn btn-primary"
+            onClick={() => {
+              setIsLoading(true);
+              loadMedicalFile();
+            }}
+          >
+            🔄 Reintentar
+          </button>
+          <button 
+            className="btn btn-secondary"
+            onClick={() => navigate('/')}
+          >
+            ← Volver al inicio
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Safe access to babyProfile properties
+  const profileName = babyProfile?.name || 'Maxi';
+  const profileDateOfBirth = babyProfile?.dateOfBirth || new Date('2024-11-01');
+
   return (
     <div className="medical-file">
       {/* Header */}
@@ -541,7 +645,7 @@ FORMATO OBLIGATORIO: Array de objetos JSON con las propiedades exactas: title, d
           ← Volver
         </button>
         <div className="header-content">
-          <h1>🩺 Ficha Médica de {babyProfile?.name || 'Maxi'}</h1>
+          <h1>🩺 Ficha Médica de {profileName}</h1>
           <p>Registro completo de salud y desarrollo</p>
         </div>
         <button 

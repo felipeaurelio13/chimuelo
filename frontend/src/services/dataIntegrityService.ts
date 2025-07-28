@@ -15,16 +15,33 @@ export class DataIntegrityService {
 
   // Unified baby profile management
   getBabyProfile(): BabyProfile {
-    const stored = localStorage.getItem(this.babyProfileKey);
-    if (stored) {
-      return JSON.parse(stored);
+    try {
+      const stored = localStorage.getItem(this.babyProfileKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        console.log('🔧 [DEBUG] Perfil cargado desde localStorage:', parsed?.name);
+        
+        // Validate that it has the required fields
+        if (parsed && parsed.name && parsed.dateOfBirth) {
+          // Ensure dateOfBirth is a proper Date object
+          if (typeof parsed.dateOfBirth === 'string') {
+            parsed.dateOfBirth = new Date(parsed.dateOfBirth);
+          }
+          return parsed;
+        }
+      }
+    } catch (error) {
+      console.error('🔧 [DEBUG] Error parsing stored profile:', error);
+      // Clear corrupted data
+      localStorage.removeItem(this.babyProfileKey);
     }
     
+    console.log('🔧 [DEBUG] Using default profile');
     // Default profile - single definition
-    return {
+    const defaultProfile = {
       id: 'default',
       name: 'Maxi',
-      dateOfBirth: new Date(),
+      dateOfBirth: new Date('2024-11-01'),
       gender: 'male' as const,
       currentWeight: 0,
       currentHeight: 0,
@@ -38,6 +55,10 @@ export class DataIntegrityService {
       lastUpdated: new Date(),
       confidence: 0
     };
+    
+    // Save the default profile
+    this.setBabyProfile(defaultProfile);
+    return defaultProfile;
   }
 
   setBabyProfile(profile: BabyProfile): void {
