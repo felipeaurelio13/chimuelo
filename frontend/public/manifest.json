@@ -3,8 +3,8 @@
   "short_name": "Chimuelo",
   "description": "Aplicación inteligente para el seguimiento de la salud de tu bebé con IA avanzada",
   "version": "1.0.0",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "/chimuelo/",
+  "scope": "/chimuelo/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#0d6efd",
@@ -14,190 +14,134 @@
   "categories": ["health", "medical", "productivity", "lifestyle"],
   "icons": [
     {
-      "src": "/chimuelo-icon.svg",
+      "src": "/chimuelo/chimuelo-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-192x192.png",
+      "src": "/chimuelo/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "/chimuelo/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
     }
   ],
   "screenshots": [
     {
-      "src": "/screenshots/dashboard-desktop.png",
-      "sizes": "1280x800",
+      "src": "/chimuelo/screenshot-desktop.png",
+      "sizes": "1280x720",
       "type": "image/png",
-      "platform": "wide",
-      "label": "Dashboard principal con resumen de salud"
+      "form_factor": "wide",
+      "label": "Dashboard principal con timeline de salud"
     },
     {
-      "src": "/screenshots/capture-mobile.png",
+      "src": "/chimuelo/screenshot-mobile.png", 
       "sizes": "390x844",
       "type": "image/png",
-      "platform": "narrow",
-      "label": "Captura de datos con IA"
-    },
-    {
-      "src": "/screenshots/timeline-mobile.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "platform": "narrow",
-      "label": "Línea de tiempo de salud"
-    },
-    {
-      "src": "/screenshots/chat-mobile.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "platform": "narrow",
-      "label": "Consultas con IA médica"
+      "form_factor": "narrow",
+      "label": "Vista móvil del chat con IA"
     }
   ],
   "shortcuts": [
     {
-      "name": "Agregar medición",
-      "short_name": "Medir",
-      "description": "Registrar nuevo dato de salud",
-      "url": "/capture",
+      "name": "Capturar datos",
+      "short_name": "Capturar",
+      "description": "Registrar nuevos datos de salud",
+      "url": "/chimuelo/capture",
       "icons": [
         {
-          "src": "/icon-192x192.png",
+          "src": "/chimuelo/icon-192x192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
       ]
     },
     {
-      "name": "Ver timeline",
+      "name": "Timeline",
       "short_name": "Timeline",
       "description": "Ver historial de salud",
-      "url": "/timeline",
+      "url": "/chimuelo/timeline", 
       "icons": [
         {
-          "src": "/icon-192x192.png",
+          "src": "/chimuelo/icon-192x192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
       ]
     },
     {
-      "name": "Consultar IA",
+      "name": "Chat IA",
       "short_name": "Chat",
-      "description": "Preguntar al asistente médico",
-      "url": "/chat",
+      "description": "Consultar con asistente de IA",
+      "url": "/chimuelo/chat",
       "icons": [
         {
-          "src": "/icon-192x192.png",
-          "sizes": "192x192",
+          "src": "/chimuelo/icon-192x192.png",
+          "sizes": "192x192", 
           "type": "image/png"
         }
       ]
     }
   ],
-  "share_target": {
-    "action": "/capture",
-    "method": "GET",
-    "params": {
-      "title": "title",
-      "text": "text",
-      "url": "url"
-    }
-  },
   "protocol_handlers": [
     {
-      "protocol": "web+chimuelo",
-      "url": "/?action=%s"
+      "protocol": "web+health",
+      "url": "/chimuelo/capture?data=%s"
     }
   ],
-  "launch_handler": {
-    "client_mode": "focus-existing"
-  },
+  "related_applications": [],
+  "prefer_related_applications": false,
   "edge_side_panel": {
-    "preferred_width": 480
+    "preferred_width": 400
+  },
+  "handle_links": "auto",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
   },
   "file_handlers": [
     {
-      "action": "/capture",
+      "action": "/chimuelo/capture",
       "accept": {
+        "image/*": [".jpg", ".jpeg", ".png", ".gif", ".webp"],
         "text/plain": [".txt"],
-        "application/json": [".json"],
-        "image/*": [".jpg", ".jpeg", ".png", ".webp"]
-      }
+        "application/pdf": [".pdf"]
+      },
+      "launch_type": "single-client"
     }
   ],
-  "handle_links": "preferred",
-  "prefer_related_applications": false,
-  "related_applications": [
-    {
-      "platform": "play",
-      "url": "https://play.google.com/store/apps/details?id=com.chimuelo.health",
-      "id": "com.chimuelo.health"
-    },
-    {
-      "platform": "itunes",
-      "url": "https://apps.apple.com/app/chimuelo-health/id123456789"
+  "share_target": {
+    "action": "/chimuelo/capture",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "images",
+          "accept": ["image/*"]
+        }
+      ]
     }
-  ],
-  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
-  "features": [
-    "offline-access",
-    "background-sync",
-    "push-notifications",
-    "file-upload",
-    "camera-access",
-    "geolocation"
-  ],
+  },
   "permissions": [
     "camera",
     "microphone",
     "notifications",
-    "background-sync",
-    "persistent-storage"
+    "persistent-storage",
+    "background-sync"
   ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "assets/*",
-        "icons/*",
-        "sounds/*"
-      ],
-      "matches": [
-        "https://*.chimuelo.app/*",
-        "https://localhost:*/*"
-      ]
-    }
+  "features": [
+    "cross-origin-isolated"
   ],
-  "offline_enabled": true,
-  "installability": {
-    "prefer_minimal_ui": false,
-    "prefer_standalone": true
-  },
-  "custom": {
-    "app_type": "health_tracker",
-    "target_audience": "parents",
-    "data_policy": "local_first",
-    "ai_powered": true,
-    "privacy_level": "maximum"
-  }
+  "display_override": ["window-controls-overlay", "minimal-ui"],
+  "id": "/chimuelo/",
+  "iarc_rating_id": "suitable-for-children"
 }

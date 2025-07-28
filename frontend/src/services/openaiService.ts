@@ -2,209 +2,267 @@
 // NOTA: La API key debe estar en las variables de entorno, nunca en el código
 
 interface OpenAIConfig {
-  apiKey: string;
   model: string;
   maxTokens: number;
   temperature: number;
 }
 
-interface OpenAIRequest {
-  prompt: string;
-  context?: string;
-  imageUrl?: string;
-  systemPrompt?: string;
+interface ExtractionRequest {
+  input: string;
+  inputType: 'text' | 'image' | 'audio' | 'video' | 'pdf';
+  schema?: any;
+  options?: {
+    model?: string;
+    temperature?: number;
+    maxTokens?: number;
+  };
 }
 
-interface OpenAIResponse {
-  success: boolean;
-  data?: any;
-  error?: string;
+interface ChatRequest {
+  messages: Array<{
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+  }>;
+  context?: any;
+  searchResults?: any[];
+  options?: {
+    model?: string;
+    temperature?: number;
+    maxTokens?: number;
+  };
 }
 
 class OpenAIService {
   private config: OpenAIConfig;
-  private baseUrl = 'https://api.openai.com/v1';
+  private workerUrl: string;
   private lastRequestTime: number = 0;
   private minRequestInterval: number = 2000; // 2 segundos entre requests
   private isQuotaExceeded: boolean = false;
   
   constructor() {
-    // Obtener API key de variables de entorno
-    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-    
-    if (!apiKey || apiKey === 'your-openai-api-key-here') {
-      console.warn('OpenAI API key no configurada. Usando modo offline.');
-    }
+    // Usar Worker URL en lugar de API directa
+    this.workerUrl = import.meta.env.VITE_WORKER_URL || 'https://maxi-worker.felipeaurelio13.workers.dev';
     
     this.config = {
-      apiKey: apiKey || '',
-      model: 'gpt-4-turbo-preview',
+      model: 'gpt-4o',
       maxTokens: 1000,
       temperature: 0.7
     };
+    
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('OpenAI Service configurado para usar Worker:', this.workerUrl);
+    }
   }
   
-  // Verificar si OpenAI está disponible
-  isAvailable(): boolean {
-    return !!this.config.apiKey && this.config.apiKey !== 'your-openai-api-key-here';
+  // Verificar si el Worker está disponible
+  async isAvailable(): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.workerUrl}/health`);
+      return response.ok;
+    } catch (error) {
+      console.warn('Worker no disponible:', error);
+      return false;
+    }
   }
-  
-  // Analizar texto con GPT-4
-  async analyzeText(request: OpenAIRequest): Promise<OpenAIResponse> {
-    if (!this.isAvailable()) {
-      return {
-        success: false,
-        error: 'OpenAI no está configurado. Usando procesamiento local.'
-      };
-    }
 
-    // Verificar si la quota fue excedida anteriormente
-    if (this.isQuotaExceeded) {
-      console.warn('🚨 OpenAI quota excedida. Usando fallback local.');
-      return {
-        success: false,
-        error: 'Quota de OpenAI excedida. Usa el procesamiento local.'
-      };
-    }
-
-    // Rate limiting: esperar tiempo mínimo entre requests
+  // Rate limiting
+  private async rateLimitCheck(): Promise<void> {
     const now = Date.now();
     const timeSinceLastRequest = now - this.lastRequestTime;
+    
     if (timeSinceLastRequest < this.minRequestInterval) {
       const waitTime = this.minRequestInterval - timeSinceLastRequest;
-      console.log(`⏳ Rate limiting: esperando ${waitTime}ms`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
+    
     this.lastRequestTime = Date.now();
-    
+  }
+
+  // Extraer datos de salud usando el Worker
+  async extractHealthData(input: string, inputType: 'text' | 'image' | 'audio' | 'video' | 'pdf' = 'text'): Promise<any> {
+    if (this.isQuotaExceeded) {
+      throw new Error('Cuota de OpenAI excedida. Intenta de nuevo más tarde.');
+    }
+
+    await this.rateLimitCheck();
+
     try {
-      const messages = [
-        {
-          role: 'system',
-          content: request.systemPrompt || 'Eres un asistente médico especializado en pediatría. Analiza la información proporcionada y extrae datos relevantes de salud infantil.'
-        },
-        {
-          role: 'user',
-          content: request.prompt
-        }
-      ];
-      
-      if (request.context) {
-        messages.push({
-          role: 'assistant',
-          content: `Contexto adicional: ${request.context}`
-        });
-      }
-      
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.config.apiKey}`
-        },
-        body: JSON.stringify({
+      const extractRequest: ExtractionRequest = {
+        input,
+        inputType,
+        options: {
           model: this.config.model,
-          messages,
-          max_tokens: this.config.maxTokens,
-          temperature: this.config.temperature
-        })
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        
-        // Detectar quota exceeded (429) y marcar como excedida
-        if (response.status === 429 || error.error?.code === 'quota_exceeded') {
-          this.isQuotaExceeded = true;
-          console.error('🚨 Quota de OpenAI excedida. Cambiando a modo local.');
+          temperature: this.config.temperature,
+          maxTokens: this.config.maxTokens
         }
-        
-        throw new Error(error.error?.message || 'Error al llamar a OpenAI');
-      }
-      
-      const data = await response.json();
-      return {
-        success: true,
-        data: data.choices[0].message.content
       };
-      
-    } catch (error) {
-      console.error('Error en OpenAI:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Error desconocido'
-      };
-    }
-  }
-  
-  // Analizar imagen con GPT-4 Vision
-  async analyzeImage(imageUrl: string, prompt: string): Promise<OpenAIResponse> {
-    if (!this.isAvailable()) {
-      return {
-        success: false,
-        error: 'OpenAI no está configurado. Usando procesamiento local.'
-      };
-    }
-    
-    try {
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+
+      const response = await fetch(`${this.workerUrl}/api/openai/extract`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.config.apiKey}`
+          'Authorization': `Bearer demo-token` // Placeholder token
         },
-        body: JSON.stringify({
-          model: 'gpt-4-vision-preview',
-          messages: [
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: prompt
-                },
-                {
-                  type: 'image_url',
-                  image_url: {
-                    url: imageUrl,
-                    detail: 'high'
-                  }
-                }
-              ]
-            }
-          ],
-          max_tokens: this.config.maxTokens
-        })
+        body: JSON.stringify(extractRequest)
       });
-      
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || 'Error al analizar imagen');
+        if (response.status === 429) {
+          this.isQuotaExceeded = true;
+          throw new Error('Límite de rate excedido');
+        }
+        throw new Error(`Error en la API: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Error desconocido');
+      }
+
+      return result.data;
+    } catch (error: any) {
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.error('Error en extractHealthData:', error);
       }
       
-      const data = await response.json();
-      return {
-        success: true,
-        data: data.choices[0].message.content
-      };
+      if (error.message.includes('quota')) {
+        this.isQuotaExceeded = true;
+      }
       
-    } catch (error) {
-      console.error('Error en OpenAI Vision:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Error desconocido'
-      };
+      throw error;
     }
   }
-  
-  // Configurar el servicio
-  configure(config: Partial<OpenAIConfig>) {
-    this.config = { ...this.config, ...config };
+
+  // Chat con IA usando el Worker
+  async chatCompletion(messages: Array<{role: 'user' | 'assistant' | 'system', content: string}>, context?: any): Promise<string> {
+    if (this.isQuotaExceeded) {
+      throw new Error('Cuota de OpenAI excedida. Intenta de nuevo más tarde.');
+    }
+
+    await this.rateLimitCheck();
+
+    try {
+      const chatRequest: ChatRequest = {
+        messages,
+        context,
+        options: {
+          model: this.config.model,
+          temperature: this.config.temperature,
+          maxTokens: this.config.maxTokens
+        }
+      };
+
+      const response = await fetch(`${this.workerUrl}/api/openai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer demo-token` // Placeholder token
+        },
+        body: JSON.stringify(chatRequest)
+      });
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          this.isQuotaExceeded = true;
+          throw new Error('Límite de rate excedido');
+        }
+        throw new Error(`Error en la API: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Error desconocido');
+      }
+
+      return result.data.response;
+    } catch (error: any) {
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.error('Error en chatCompletion:', error);
+      }
+      
+      if (error.message.includes('quota')) {
+        this.isQuotaExceeded = true;
+      }
+      
+      throw error;
+    }
+  }
+
+  // Análisis de síntomas
+  async analyzeSymptoms(symptoms: string, context?: any): Promise<any> {
+    const prompt = `Analiza los siguientes síntomas de un bebé: "${symptoms}". 
+    Proporciona información útil pero siempre recomienda consultar con un pediatra.
+    ${context ? `\nContexto adicional: ${JSON.stringify(context)}` : ''}`;
+
+    const messages = [
+      {
+        role: 'system' as const,
+        content: 'Eres un asistente médico especializado en pediatría. Proporciona información útil pero siempre recomienda consultar con un profesional médico.'
+      },
+      {
+        role: 'user' as const,
+        content: prompt
+      }
+    ];
+
+    return await this.chatCompletion(messages, context);
+  }
+
+  // Generar recomendaciones
+  async generateRecommendations(healthData: any): Promise<string[]> {
+    const prompt = `Basándote en estos datos de salud infantil: ${JSON.stringify(healthData)}, 
+    genera 3-5 recomendaciones prácticas para el cuidado del bebé.`;
+
+    const messages = [
+      {
+        role: 'system' as const,
+        content: 'Eres un experto en cuidado infantil. Genera recomendaciones prácticas y seguras.'
+      },
+      {
+        role: 'user' as const,
+        content: prompt
+      }
+    ];
+
+    const response = await this.chatCompletion(messages);
+    
+    // Intentar parsear como lista
+    try {
+      const lines = response.split('\n').filter(line => line.trim());
+      return lines.map(line => line.replace(/^[-•*]\s*/, '').trim()).filter(rec => rec.length > 0);
+    } catch {
+      return [response];
+    }
+  }
+
+  // Resetear estado de cuota
+  resetQuotaStatus(): void {
+    this.isQuotaExceeded = false;
+  }
+
+  // Configurar modelo
+  setModel(model: string): void {
+    this.config.model = model;
+  }
+
+  // Configurar temperatura
+  setTemperature(temperature: number): void {
+    this.config.temperature = Math.max(0, Math.min(2, temperature));
+  }
+
+  // Configurar tokens máximos
+  setMaxTokens(maxTokens: number): void {
+    this.config.maxTokens = Math.max(100, Math.min(4000, maxTokens));
+  }
+
+  // Obtener configuración actual
+  getConfig(): OpenAIConfig {
+    return { ...this.config };
   }
 }
 
-// Exportar instancia única
-export const openAIService = new OpenAIService();
-
-// Exportar tipos
-export type { OpenAIRequest, OpenAIResponse };
+// Singleton instance
+const openaiService = new OpenAIService();
+export default openaiService;
