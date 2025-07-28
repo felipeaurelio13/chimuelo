@@ -741,7 +741,7 @@ const Capture: React.FC = () => {
         }}>
           ← Volver
         </button>
-        <h1>Capturar Datos</h1>
+        <h1>📸 Capturar Datos de Salud</h1>
         <div className="header-actions">
           <span className={`detection-badge ${detectedType}`}>
             {detectedType === 'weight' && '⚖️ Peso'}
