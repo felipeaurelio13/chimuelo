@@ -1,3 +1,5 @@
+import { dataIntegrityService } from './dataIntegrityService';
+
 // Types
 interface APIResponse<T = any> {
   success: boolean;
@@ -196,26 +198,8 @@ class APIService {
         throw new Error('El servicio de IA no está disponible. Verifica tu conexión.');
       }
 
-                  // Obtener contexto médico del perfil de Maxi
-            let medicalContext = '';
-            try {
-              const savedProfile = localStorage.getItem(`babyProfile_${this.getCurrentUserId()}`);
-              if (savedProfile) {
-                const profile = JSON.parse(savedProfile);
-                const age = this.calculateAge(new Date(profile.dateOfBirth), new Date());
-                medicalContext = `
-CONTEXTO MÉDICO DE ${profile.name.toUpperCase()}:
-- Edad actual: ${age}
-- Género: ${profile.gender || 'No especificado'}
-- Alergias conocidas: ${profile.allergies?.length > 0 ? profile.allergies.join(', ') : 'Ninguna'}
-- Peso actual: ${profile.currentWeight ? `${profile.currentWeight} kg` : 'No registrado'}
-- Altura actual: ${profile.currentHeight ? `${profile.currentHeight} cm` : 'No registrado'}
-- Tipo de sangre: ${profile.bloodType || 'No registrado'}
-`;
-              }
-            } catch (error) {
-              console.log('No se pudo obtener contexto médico:', error);
-            }
+                  // Obtener contexto médico del perfil de Maxi usando el servicio centralizado
+            const medicalContext = dataIntegrityService.getMedicalContext();
 
             // Preparar mensajes con contexto médico personalizado
             const systemPrompt = `Eres un asistente médico especializado en pediatría y salud infantil. 

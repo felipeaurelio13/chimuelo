@@ -32,6 +32,13 @@ jobs:
         run: |
           cd frontend
           npm ci
+          
+      - name: Auto-increment version
+        run: |
+          cd frontend
+          # Get current version and increment patch
+          npm run version:patch
+          echo "New version: $(node -p "require('./package.json').version")"
 
       - name: Build
         run: |

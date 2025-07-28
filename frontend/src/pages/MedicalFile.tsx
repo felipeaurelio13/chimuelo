@@ -4,7 +4,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { BabyProfile, MedicalMilestone, FutureMilestone, MedicalSummary } from '../types/medical';
 import { calculateAge, formatAge } from '../utils/dateUtils';
+import { dataIntegrityService } from '../services/dataIntegrityService';
 import openaiService from '../services/openaiService';
+import AppVersion from '../components/AppVersion';
 import '../styles/MedicalFile.css';
 
 interface EditProfileModalProps {
