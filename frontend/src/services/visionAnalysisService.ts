@@ -65,6 +65,11 @@ export class VisionAnalysisService {
    */
   public async analyzeDocument(request: VisionAnalysisRequest): Promise<VisionAnalysisResult> {
     try {
+      // Check if it's a PDF and handle differently
+      if (request.imageFile.type === 'application/pdf') {
+        return this.analyzePDFDocument(request);
+      }
+
       // Convert image to base64
       const base64Image = await this.fileToBase64(request.imageFile);
       
@@ -192,6 +197,60 @@ IMPORTANTE:
     };
 
     return this.analyzeDocument(request);
+  }
+
+  /**
+   * Handles PDF document analysis (currently uses fallback method)
+   */
+  private async analyzePDFDocument(request: VisionAnalysisRequest): Promise<VisionAnalysisResult> {
+    try {
+      // For now, provide a structured fallback response for PDFs
+      // In the future, this could be enhanced with PDF-to-image conversion
+      const fallbackData: ExtractedMedicalData = {
+        documentType: request.documentType,
+        patientInfo: {
+          name: "Información no extraída de PDF",
+          dateOfBirth: undefined,
+          age: undefined
+        },
+        extractedData: {
+          date: new Date().toISOString().split('T')[0],
+          provider: "Documento PDF procesado",
+          mainFindings: [
+            "PDF detectado - Se requiere conversión a imagen para análisis completo",
+            "Recomendación: Convierte el PDF a imagen (PNG/JPG) para mejor análisis"
+          ],
+          medications: [],
+          measurements: {
+            other: {}
+          },
+          recommendations: [
+            "Revisar documento PDF manualmente",
+            "Convertir a formato de imagen para análisis automático"
+          ],
+          urgentFlags: []
+        },
+        analysisNotes: {
+          confidence: 'bajo',
+          allergyWarnings: [],
+          ageAppropriate: "Requiere revisión manual",
+          requiresPhysicianReview: true
+        }
+      };
+
+      return {
+        success: true,
+        data: fallbackData,
+        rawResponse: "PDF procesado con método de fallback"
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: `Error procesando PDF: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        rawResponse: undefined
+      };
+    }
   }
 
   // Private helper methods
@@ -323,15 +382,19 @@ IMPORTANTE:
   }
 
   /**
-   * Validates image file for medical document analysis
+   * Validates image/document file for medical analysis
    */
   public validateImageFile(file: File): { valid: boolean; error?: string } {
-    // Check file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    // Check file type - support images and PDFs
+    const allowedTypes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
+      'application/pdf'
+    ];
+    
     if (!allowedTypes.includes(file.type)) {
       return {
         valid: false,
-        error: 'Tipo de archivo no soportado. Use JPEG, PNG o WebP.'
+        error: 'Tipo de archivo no soportado. Use JPEG, PNG, WebP o PDF.'
       };
     }
 
@@ -341,6 +404,14 @@ IMPORTANTE:
       return {
         valid: false,
         error: 'El archivo es demasiado grande. Máximo 20MB.'
+      };
+    }
+
+    // Additional validation for file integrity
+    if (!file.name || file.name.trim() === '') {
+      return {
+        valid: false,
+        error: 'Nombre de archivo no válido.'
       };
     }
 

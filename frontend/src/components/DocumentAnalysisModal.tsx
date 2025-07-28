@@ -67,9 +67,13 @@ const DocumentAnalysisModal: React.FC<DocumentAnalysisModalProps> = ({
     const suggestedType = visionAnalysisService.suggestDocumentType(file.name);
     setDocumentType(suggestedType);
     
-    // Create preview
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
+    // Create preview (only for images, not PDFs)
+    if (file.type.startsWith('image/')) {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+    } else {
+      setPreviewUrl(null);
+    }
   };
 
   // Analyze document
@@ -143,12 +147,12 @@ const DocumentAnalysisModal: React.FC<DocumentAnalysisModalProps> = ({
                   </button>
                 </p>
                 <p className="drop-zone-subtext">
-                  Soporta: JPEG, PNG, WebP (máx. 20MB)
+                  Soporta: JPEG, PNG, WebP, PDF (máx. 20MB)
                 </p>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
                   onChange={handleFileSelect}
                   style={{ display: 'none' }}
                 />
@@ -157,7 +161,17 @@ const DocumentAnalysisModal: React.FC<DocumentAnalysisModalProps> = ({
           ) : (
             <div className="file-preview-section">
               <div className="file-preview">
-                <img src={previewUrl || ''} alt="Vista previa" className="preview-image" />
+                {selectedFile.type === 'application/pdf' ? (
+                  <div className="pdf-preview">
+                    <div className="pdf-icon">📄</div>
+                    <div className="pdf-preview-text">Archivo PDF</div>
+                    <div className="pdf-preview-note">
+                      Se procesará con análisis básico
+                    </div>
+                  </div>
+                ) : (
+                  <img src={previewUrl || ''} alt="Vista previa" className="preview-image" />
+                )}
                 <div className="file-info">
                   <div className="file-name">{selectedFile.name}</div>
                   <div className="file-size">
