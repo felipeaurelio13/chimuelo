@@ -76,6 +76,7 @@ interface DataContextType {
   state: DataState;
   
   // Health Records
+  healthRecords: HealthRecord[];
   refreshHealthRecords: () => Promise<void>;
   createHealthRecord: (record: Omit<HealthRecord, 'id' | 'createdAt' | 'updatedAt'>) => Promise<HealthRecord>;
   updateHealthRecord: (id: string, updates: Partial<HealthRecord>) => Promise<void>;
@@ -570,6 +571,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
 
   const contextValue: DataContextType = {
     state,
+    healthRecords: state.healthRecords,
     refreshHealthRecords,
     createHealthRecord,
     updateHealthRecord,

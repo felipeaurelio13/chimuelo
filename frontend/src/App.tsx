@@ -9,6 +9,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Capture from './pages/Capture';
 import Timeline from './pages/Timeline';
+import MedicalFile from './pages/MedicalFile';
 import Chat from './pages/Chat';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
@@ -57,6 +58,11 @@ function AppContent() {
           <Route path="/timeline" element={
             <ProtectedRoute>
               <Timeline />
+            </ProtectedRoute>
+          } />
+          <Route path="/medical-file" element={
+            <ProtectedRoute>
+              <MedicalFile />
             </ProtectedRoute>
           } />
           <Route path="/chat" element={

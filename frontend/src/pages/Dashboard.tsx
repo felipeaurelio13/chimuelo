@@ -179,9 +179,12 @@ const Dashboard: React.FC = () => {
       case 'capture':
         navigate('/capture');
         break;
-      case 'timeline':
-        navigate('/timeline');
-        break;
+          case 'medical-file':
+      navigate('/medical-file');
+      break;
+    case 'timeline':
+      navigate('/timeline');
+      break;
       case 'chat':
         navigate('/chat');
         break;
@@ -259,12 +262,12 @@ const Dashboard: React.FC = () => {
           
           <button 
             className="action-card"
-            onClick={() => handleQuickAction('timeline')}
+            onClick={() => handleQuickAction('medical-file')}
           >
-            <div className="action-icon">📅</div>
+            <div className="action-icon">🩺</div>
             <div className="action-content">
-              <h3>Timeline</h3>
-              <p>Ver historial</p>
+              <h3>Ficha Médica</h3>
+              <p>Perfil completo de Maxi</p>
             </div>
           </button>
           

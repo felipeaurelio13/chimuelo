@@ -196,19 +196,44 @@ class APIService {
         throw new Error('El servicio de IA no está disponible. Verifica tu conexión.');
       }
 
-      // Preparar mensajes con contexto médico
-      const systemPrompt = `Eres un asistente médico especializado en pediatría y salud infantil. 
-      
+                  // Obtener contexto médico del perfil de Maxi
+            let medicalContext = '';
+            try {
+              const savedProfile = localStorage.getItem(`babyProfile_${this.getCurrentUserId()}`);
+              if (savedProfile) {
+                const profile = JSON.parse(savedProfile);
+                const age = this.calculateAge(new Date(profile.dateOfBirth), new Date());
+                medicalContext = `
+CONTEXTO MÉDICO DE ${profile.name.toUpperCase()}:
+- Edad actual: ${age}
+- Género: ${profile.gender || 'No especificado'}
+- Alergias conocidas: ${profile.allergies?.length > 0 ? profile.allergies.join(', ') : 'Ninguna'}
+- Peso actual: ${profile.currentWeight ? `${profile.currentWeight} kg` : 'No registrado'}
+- Altura actual: ${profile.currentHeight ? `${profile.currentHeight} cm` : 'No registrado'}
+- Tipo de sangre: ${profile.bloodType || 'No registrado'}
+`;
+              }
+            } catch (error) {
+              console.log('No se pudo obtener contexto médico:', error);
+            }
+
+            // Preparar mensajes con contexto médico personalizado
+            const systemPrompt = `Eres un asistente médico especializado en pediatría y salud infantil. 
+
+${medicalContext}
+
 IMPORTANTE:
 - Proporciona información precisa y útil sobre el cuidado de bebés
 - Siempre recomienda consultar con un pediatra para temas médicos serios
-- Sé empático y comprensivo con los padres
+- Sé empático y comprensivo con los padres primerizos
 - Usa un lenguaje claro y comprensible
 - Si no estás seguro de algo, dilo claramente
 - Nunca diagnostiques ni recetes medicamentos
 - Enfócate en orientación y primeros auxilios básicos
+- Considera la edad específica del bebé en tus respuestas
+- Si hay alergias conocidas, mencionálas cuando sea relevante
 
-Si el usuario proporciona contexto (datos previos del bebé), úsalo para dar respuestas más personalizadas.`;
+Responde como si fueras un pediatra experimentado pero cálido y comprensivo.`;
 
       const messages = [
         {
@@ -313,6 +338,50 @@ Si el usuario proporciona contexto (datos previos del bebé), úsalo para dar re
       return data ? JSON.parse(data) : [];
     } catch (error) {
       return [];
+    }
+  }
+
+  // Private helper methods
+  private getCurrentUserId(): string {
+    // Get current user ID from auth context or localStorage
+    try {
+      const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      return user.id || 'default_user';
+    } catch {
+      return 'default_user';
+    }
+  }
+
+  private calculateAge(birthDate: Date, currentDate: Date): string {
+    const birth = new Date(birthDate);
+    const current = new Date(currentDate);
+    
+    let years = current.getFullYear() - birth.getFullYear();
+    let months = current.getMonth() - birth.getMonth();
+    let days = current.getDate() - birth.getDate();
+
+    if (days < 0) {
+      months--;
+      const lastDayOfPreviousMonth = new Date(current.getFullYear(), current.getMonth(), 0).getDate();
+      days += lastDayOfPreviousMonth;
+    }
+
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+
+    if (years === 0 && months === 0) {
+      if (days < 7) {
+        return `${days} día${days > 1 ? 's' : ''}`;
+      } else {
+        const weeks = Math.floor(days / 7);
+        return `${weeks} semana${weeks > 1 ? 's' : ''}`;
+      }
+    } else if (years === 0) {
+      return `${months} mes${months > 1 ? 'es' : ''}`;
+    } else {
+      return `${years} año${years > 1 ? 's' : ''} ${months} mes${months > 1 ? 'es' : ''}`;
     }
   }
 }
