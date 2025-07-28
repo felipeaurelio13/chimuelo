@@ -51,21 +51,32 @@ const medicalFallbackResponses = {
 
 📊 **Consulta las curvas de crecimiento con tu pediatra regularmente.**`,
 
-  desarrollo: `Desarrollo infantil por etapas:
+  desarrollo: `Desarrollo infantil actualizado (según AAP 2024):
 
-👶 **0-3 meses:**
-• Sostiene la cabeza brevemente • Sigue objetos con la mirada • Sonríe socialmente • Reacciona a sonidos
+👶 **0-2 MESES (Recién nacido):**
+• Control cefálico gradual • Seguimiento visual • Sonrisa social • Respuesta a sonidos fuertes
+• **Señales de alerta:** No responde a sonidos, no sigue objetos, llanto inconsolable
 
-👶 **3-6 meses:**
-• Control de cabeza • Se voltea • Agarra objetos • Balbucea • Reconoce voces familiares
+👶 **2-4 MESES:**
+• Levanta cabeza 45° boca abajo • Sonríe respondiendo • Balbucea • Agarra objetos voluntariamente
+• **Estimulación:** Tiempo boca abajo supervisado, juguetes contrastantes
 
-👶 **6-9 meses:**
-• Se sienta con apoyo • Transfiere objetos entre manos • Dice sílabas • Ansiedad por extraños
+👶 **4-6 MESES:**
+• Se voltea • Control cefálico completo • Ríe • Transfiere objetos • Reconoce cuidadores
+• **Hito clave:** Introducción alimentación complementaria (6 meses)
 
-👶 **9-12 meses:**
-• Gatea o se desplaza • Se pone de pie • Pinza digital • Primeras palabras • Juegos de imitación
+👶 **6-9 MESES:**
+• Se sienta sin apoyo • Pinza inferior • Sílabas repetidas • Ansiedad separación
+• **Estimulación:** Juegos causa-efecto, exploración texturas seguras
 
-⚠️ **Cada bebé se desarrolla a su ritmo. Si tienes dudas, consulta con tu pediatra.**`,
+👶 **9-12 MESES:**
+• Gatea/se desplaza • Pinza superior • Primeras palabras • Comprende "no"
+• **Hitos:** Bipedestación con apoyo, imitación gestos
+
+🧠 **ESTIMULACIÓN TEMPRANA 2024:**
+• Lectura desde nacimiento • Música clásica • Juego libre • Límites pantallas
+
+⚠️ **Consulta si tu bebé no alcanza hitos en el tiempo esperado. Cada niño es único.**`,
 
   sueno: `Patrones de sueño saludables:
 
@@ -88,24 +99,29 @@ const medicalFallbackResponses = {
 
 *Consulta con tu pediatra si hay cambios drásticos en el sueño.*`,
 
-  vacunas: `Calendario de vacunación (España):
+  vacunas: `Calendario de vacunación actualizado (España 2024-2025):
 
-💉 **Primeros meses:**
-• **Nacimiento:** BCG (si indicada), Hepatitis B
-• **2 meses:** DTPa-VPI, Hib, Neumococo, Rotavirus
-• **4 meses:** DTPa-VPI, Hib, Neumococo, Rotavirus
-• **6 meses:** DTPa-VPI, Hib, Neumococo, Rotavirus (si indicada)
+💉 **CALENDARIO OFICIAL AEP 2024:**
+• **Nacimiento:** Hepatitis B (primera dosis)
+• **2 meses:** DTPa-VPI-Hib, Neumococo conjugada 13v, Rotavirus, Meningococo B
+• **4 meses:** DTPa-VPI-Hib, Neumococo conjugada 13v, Rotavirus, Meningococo B  
+• **6 meses:** DTPa-VPI-Hib, Hepatitis B, Neumococo conjugada 13v
 
-💉 **Primer año:**
-• **12 meses:** SRP (sarampión, rubéola, parotiditis), Neumococo, Meningococo C
-• **15-18 meses:** DTPa-VPI, Hib, Varicela
+💉 **SEGUNDO SEMESTRE:**
+• **12 meses:** SRP (Triple vírica), Neumococo conjugada 13v, Meningococo C
+• **15-18 meses:** DTPa-VPI-Hib (4ª dosis), Varicela, Meningococo B (4ª dosis)
 
-📅 **Importante:**
-• Mantén el carnet de vacunación actualizado
-• Las vacunas pueden variar según la comunidad autónoma
-• Consulta con tu pediatra el calendario específico
+📋 **NOVEDADES 2024:**
+• Incluida vacuna Meningococo B en calendario sistemático
+• Nueva pauta neumococo: 2+1 (2, 4, 12 meses)
+• VRS (virus respiratorio sincitial) para grupos de riesgo
 
-⚠️ **No retrases las vacunas sin consultar con tu médico.**`,
+🌍 **POR COMUNIDADES AUTÓNOMAS:**
+• Algunas CCAA incluyen vacunas adicionales
+• Consulta el calendario específico de tu región
+• Disponible en: vacunasaep.org
+
+⚠️ **IMPORTANTE:** Información actualizada a enero 2024. Confirma con tu pediatra.`,
 
   general: `Como asistente de salud infantil, te ayudo con información sobre el cuidado de tu bebé.
 

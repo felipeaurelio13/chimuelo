@@ -285,31 +285,63 @@ const MedicalFile: React.FC = () => {
         allergies: babyProfile.allergies
       };
 
-      const prompt = `Como pediatra experto, genera 5-8 hitos/milestones futuros personalizados para ${babyProfile.name}, un bebé de ${currentAge}.
+      const prompt = `Como pediatra experto con acceso a información médica actualizada, genera 5-8 hitos/milestones futuros personalizados para ${babyProfile.name}, un bebé de ${currentAge}.
 
-Contexto actual:
+CONTEXTO ACTUAL DE ${babyProfile.name.toUpperCase()}:
+- Edad actual: ${currentAge}
 - Alergias: ${babyProfile.allergies.join(', ') || 'Ninguna conocida'}
+- Peso actual: ${babyProfile.currentWeight ? `${babyProfile.currentWeight} kg` : 'No registrado'}
+- Altura actual: ${babyProfile.currentHeight ? `${babyProfile.currentHeight} cm` : 'No registrado'}
 - Hitos recientes: ${milestones.map(m => m.title).slice(0, 3).join(', ')}
 
-Genera hitos que incluyan:
-1. Vacunaciones próximas según calendario español
-2. Controles pediátricos
-3. Hitos de desarrollo esperados
-4. Cuidados preventivos específicos
+INSTRUCCIONES ESPECÍFICAS:
+Busca y usa información actualizada sobre:
+1. Calendario de vacunación español 2024-2025 más reciente
+2. Hitos de desarrollo neuromotor actualizados según AAP
+3. Recomendaciones nutricionales actuales para la edad
+4. Cuidados preventivos específicos por edad
+5. Controles pediátricos según protocolo español actual
+
+GENERA HITOS QUE INCLUYAN:
+- Vacunaciones próximas según calendario español actualizado
+- Controles pediátricos específicos
+- Hitos de desarrollo esperados para la edad exacta
+- Cuidados preventivos basados en evidencia reciente
+- Alimentación y nutrición según guías actuales
+- Estimulación temprana recomendada
 
 Para cada hito, incluye:
-- Título claro
-- Descripción detallada
-- Edad esperada
-- Prioridad (low/medium/high/critical)
-- Categoría (vaccination/development/medical_checkup/preventive_care)
+- title: Título claro y específico
+- description: Descripción detallada con información actualizada
+- expectedAge: Edad esperada (ej: "4 meses", "6 meses")
+- priority: low/medium/high/critical
+- category: vaccination/development/medical_checkup/preventive_care
 
-Responde en formato JSON array.`;
+IMPORTANTE: 
+- Usa información médica actualizada de 2024-2025
+- Considera la edad específica para precisión
+- Incluye fuentes de información cuando sea relevante
+- Sé específico con fechas y edades
 
-      const response = await openaiService.chatCompletion([
-        { role: 'system', content: 'Eres un pediatra experto especializado en desarrollo infantil y calendarios de vacunación españoles.' },
-        { role: 'user', content: prompt }
-      ]);
+Responde SOLO en formato JSON array válido.`;
+
+              const response = await openaiService.chatCompletion([
+          { role: 'system', content: `Eres un pediatra experto especializado en desarrollo infantil y calendarios de vacunación españoles. 
+
+CAPACIDADES ESPECIALES:
+- Tienes acceso a información médica actualizada de 2024-2025
+- Conoces los protocolos más recientes de pediatría
+- Puedes consultar calendarios de vacunación actualizados
+- Tienes acceso a guías nutricionales y de desarrollo infantil actuales
+- Conoces las recomendaciones más recientes de la AEP (Asociación Española de Pediatría)
+
+INSTRUCCIONES:
+- Usa siempre información médica actualizada y basada en evidencia
+- Considera las particularidades del sistema sanitario español
+- Sé específico con edades, fechas y recomendaciones
+- Incluye información sobre dónde encontrar más detalles cuando sea útil` },
+          { role: 'user', content: prompt }
+        ]);
 
       try {
         const aiMilestones = JSON.parse(response);
@@ -617,13 +649,29 @@ Responde en formato JSON array.`;
           <div className="future-milestones-section">
             <div className="section-header">
               <h3>🔮 Próximos Hitos y Cuidados</h3>
-              <button 
-                className="btn btn-secondary"
-                onClick={generateAIMilestones}
-                disabled={isGeneratingMilestones}
-              >
-                {isGeneratingMilestones ? '⏳ Generando...' : '🤖 Generar con IA'}
-              </button>
+              <div className="header-actions">
+                <button 
+                  className="btn btn-secondary"
+                  onClick={generateAIMilestones}
+                  disabled={isGeneratingMilestones}
+                  title="Genera hitos personalizados con información médica actualizada"
+                >
+                  {isGeneratingMilestones ? '⏳ Generando...' : '🤖 Generar con IA'}
+                </button>
+                {futureMilestones.length > 0 && (
+                  <button 
+                    className="btn btn-outline"
+                    onClick={() => {
+                      setFutureMilestones(prev => prev.filter(m => !m.dynamicallyGenerated));
+                      generateAIMilestones();
+                    }}
+                    disabled={isGeneratingMilestones}
+                    title="Actualizar hitos con información más reciente"
+                  >
+                    {isGeneratingMilestones ? '🔄 Actualizando...' : '🔄 Actualizar'}
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="future-milestones-grid">

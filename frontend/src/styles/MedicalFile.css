@@ -247,6 +247,12 @@
   margin-bottom: var(--space-4);
 }
 
+.header-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
 .section-header h3 {
   color: var(--accent-primary);
   font-size: var(--font-size-xl);
@@ -593,6 +599,17 @@
   background: var(--bg-surface);
   border-color: var(--accent-primary);
   color: var(--accent-primary);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--accent-primary);
+  border: 2px solid var(--accent-primary);
+}
+
+.btn-outline:hover {
+  background: var(--accent-primary);
+  color: white;
 }
 
 .btn:disabled {
