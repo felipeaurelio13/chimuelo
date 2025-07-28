@@ -197,7 +197,7 @@ export default {
       }
       
       // OpenAI Chat endpoint with fallback
-      if (url.pathname === '/api/openai/chat' && request.method === 'POST') {
+      if ((url.pathname === '/api/openai/chat' || url.pathname === '/api/openai-proxy') && request.method === 'POST') {
         const body = await request.json() as any;
         
         if (!body?.messages || !Array.isArray(body.messages)) {
@@ -213,6 +213,15 @@ export default {
         // Try OpenAI first if API key is available
         if (env?.OPENAI_API_KEY) {
           try {
+            // Check if this is a vision request
+            const hasImages = body.messages.some((msg: any) => 
+              Array.isArray(msg.content) && 
+              msg.content.some((content: any) => content.type === 'image_url')
+            );
+
+            // Use appropriate model for vision requests
+            const model = hasImages ? 'gpt-4o' : (body.options?.model || 'gpt-4o-mini');
+            
             const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
               method: 'POST',
               headers: {
@@ -220,10 +229,10 @@ export default {
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
-                model: body.options?.model || 'gpt-4o-mini',
+                model: model,
                 messages: body.messages,
-                temperature: body.options?.temperature || 0.7,
-                max_tokens: body.options?.maxTokens || 500,
+                temperature: body.options?.temperature || (hasImages ? 0.1 : 0.7),
+                max_tokens: body.options?.maxTokens || (hasImages ? 2000 : 500),
               }),
             });
 
@@ -235,16 +244,50 @@ export default {
                 data: {
                   response: openaiData.choices?.[0]?.message?.content || 'No response',
                   usage: openaiData.usage,
-                  model: body.options?.model || 'gpt-4o-mini',
-                  source: 'openai'
+                  model: model,
+                  source: 'openai',
+                  isVisionRequest: hasImages
                 },
                 timestamp: new Date().toISOString()
               }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
               });
+            } else {
+              const errorData = await openaiResponse.text();
+              console.log('OpenAI API error:', errorData);
+              
+              // Return specific error for vision requests
+              if (hasImages) {
+                return new Response(JSON.stringify({
+                  success: false,
+                  error: 'Error en el análisis de imagen. Por favor, intenta con una imagen más clara.',
+                  details: 'Vision API temporarily unavailable',
+                  source: 'openai-error'
+                }), {
+                  status: openaiResponse.status,
+                  headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                });
+              }
             }
           } catch (openaiError) {
             console.log('OpenAI failed, using fallback:', openaiError);
+            
+            // For vision requests, return specific error
+            const hasImages = body.messages.some((msg: any) => 
+              Array.isArray(msg.content) && 
+              msg.content.some((content: any) => content.type === 'image_url')
+            );
+            
+            if (hasImages) {
+              return new Response(JSON.stringify({
+                success: false,
+                error: 'Análisis de imagen no disponible temporalmente. Por favor, intenta más tarde.',
+                source: 'vision-unavailable'
+              }), {
+                status: 503,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
           }
         }
 
@@ -273,7 +316,7 @@ export default {
         success: false,
         error: 'Endpoint not found',
         path: url.pathname,
-        available_endpoints: ['/health', '/api/openai/chat']
+        available_endpoints: ['/health', '/api/openai/chat', '/api/openai-proxy']
       }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

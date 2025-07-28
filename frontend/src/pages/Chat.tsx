@@ -4,6 +4,9 @@ import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/apiService';
 import { type ChatMessage } from '../services/databaseService';
+import { chatContextService } from '../services/chatContextService';
+import { visionAnalysisService, VisionAnalysisResult } from '../services/visionAnalysisService';
+import DocumentAnalysisModal from '../components/DocumentAnalysisModal';
 import AppFooter from '../components/AppFooter';
 import '../styles/Chat.css';
 
@@ -26,13 +29,15 @@ const Chat: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { 
-    state: { chatSessions, activeChatSession },
+    state,
     createChatSession,
     updateChatSession,
     setActiveChatSession,
     getSmartContext,
     refreshChatSessions
   } = useData();
+  
+  const { chatSessions, activeChatSession } = state;
 
   // Local state
   const [inputData, setInputData] = useState<ChatInputData>({
@@ -44,11 +49,17 @@ const Chat: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
+  const [showDocumentModal, setShowDocumentModal] = useState(false);
   
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const isMounted = useRef(true);
+
+  // Update chat context with health records when they change
+  useEffect(() => {
+    chatContextService.setHealthRecords(state.healthRecords);
+  }, [state.healthRecords]);
 
   // Auto-scroll to bottom
   const scrollToBottom = useCallback(() => {
@@ -109,6 +120,66 @@ const Chat: React.FC = () => {
     if (import.meta.env.VITE_DEV === 'TRUE') {
       console.log('Chat: Suggestion clicked:', suggestion.text);
     }
+  };
+
+  // Handle document analysis completion
+  const handleDocumentAnalysis = async (result: VisionAnalysisResult) => {
+    if (!result.success || !result.data) {
+      setError('Error al analizar el documento');
+      return;
+    }
+
+    // Create a formatted message with the extracted data
+    const extractedData = result.data;
+    
+    let analysisMessage = `📄 **Documento Analizado: ${extractedData.documentType}**\n\n`;
+    
+    if (extractedData.patientInfo.name) {
+      analysisMessage += `👤 **Paciente:** ${extractedData.patientInfo.name}\n`;
+    }
+    if (extractedData.extractedData.date) {
+      analysisMessage += `📅 **Fecha:** ${extractedData.extractedData.date}\n`;
+    }
+    if (extractedData.extractedData.provider) {
+      analysisMessage += `🏥 **Proveedor:** ${extractedData.extractedData.provider}\n`;
+    }
+    
+    if (extractedData.extractedData.mainFindings.length > 0) {
+      analysisMessage += `\n🔍 **Hallazgos principales:**\n`;
+      extractedData.extractedData.mainFindings.forEach(finding => {
+        analysisMessage += `• ${finding}\n`;
+      });
+    }
+    
+    if (extractedData.extractedData.medications.length > 0) {
+      analysisMessage += `\n💊 **Medicamentos:**\n`;
+      extractedData.extractedData.medications.forEach(med => {
+        analysisMessage += `• ${med.name}`;
+        if (med.dose) analysisMessage += ` - ${med.dose}`;
+        if (med.frequency) analysisMessage += ` - ${med.frequency}`;
+        analysisMessage += `\n`;
+      });
+    }
+
+    if (extractedData.extractedData.urgentFlags.length > 0) {
+      analysisMessage += `\n⚠️ **Requiere atención:**\n`;
+      extractedData.extractedData.urgentFlags.forEach(flag => {
+        analysisMessage += `• ${flag}\n`;
+      });
+    }
+
+    if (extractedData.analysisNotes.allergyWarnings.length > 0) {
+      analysisMessage += `\n🚨 **Advertencias de alergias:**\n`;
+      extractedData.analysisNotes.allergyWarnings.forEach(warning => {
+        analysisMessage += `• ${warning}\n`;
+      });
+    }
+
+    analysisMessage += `\n**¿Tienes alguna pregunta específica sobre este documento?**`;
+    
+    // Send the analysis as a message for AI to process
+    setInputData(prev => ({ ...prev, message: analysisMessage }));
+    setShowSuggestions(false);
   };
 
   // Create new chat session
@@ -442,6 +513,15 @@ const Chat: React.FC = () => {
         )}
 
         <div className="input-container">
+          <button
+            className="document-analysis-btn"
+            onClick={() => setShowDocumentModal(true)}
+            title="Analizar documento médico"
+            disabled={isLoading}
+          >
+            📄
+          </button>
+          
           <textarea
             ref={inputRef}
             value={inputData.message}
@@ -465,6 +545,13 @@ const Chat: React.FC = () => {
             )}
           </button>
         </div>
+        
+        {/* Document Analysis Modal */}
+        <DocumentAnalysisModal
+          isOpen={showDocumentModal}
+          onClose={() => setShowDocumentModal(false)}
+          onAnalysisComplete={handleDocumentAnalysis}
+        />
       </footer>
       
       {/* App Footer */}
