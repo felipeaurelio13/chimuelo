@@ -1,7 +1,7 @@
 // Sistema de Agentes de IA Especializados - Versión 2.0 Mejorada
 // Basado en mejores prácticas de OpenAI y papers de medical AI
 
-import { openAIService } from './openaiService';
+import openaiService from './openaiService';
 
 export interface AgentResponse {
   agentName: string;

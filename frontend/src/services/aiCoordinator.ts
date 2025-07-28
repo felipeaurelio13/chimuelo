@@ -1,5 +1,5 @@
 // Coordinador de IA con contexto real del usuario
-import { openAIService } from './openaiService';
+import openaiService from './openaiService';
 import { AIProcessingCoordinatorV2 } from './aiAgents';
 import { type HealthRecord } from './databaseService';
 
@@ -275,7 +275,7 @@ export class ContextAwareAICoordinator {
     await this.simulateProcessingStep('Analizador de Contexto', 'Procesando información del bebé...', 400);
 
     // Verificar si OpenAI está disponible y si es necesario
-    const useOpenAI = this.shouldUseOpenAI(input) && openAIService.isAvailable();
+    const useOpenAI = this.shouldUseOpenAI(input) && await openaiService.isAvailable();
     
     if (useOpenAI) {
       await this.simulateProcessingStep('OpenAI', 'Conectando con IA avanzada...', 500);
@@ -328,38 +328,41 @@ export class ContextAwareAICoordinator {
       - Si detectas algo preocupante, recomienda consultar al pediatra
       - Usa el contexto para dar respuestas más precisas`;
 
-      const response = await openAIService.analyzeText({
-        prompt: enrichedInput,
-        systemPrompt,
-        context: JSON.stringify(userContext)
-      });
-
-      if (response.success) {
-        try {
-          return {
-            success: true,
-            data: JSON.parse(response.data || '{}')
-          };
-        } catch {
-          // Si no es JSON válido, tratar como respuesta de texto
-          return {
-            success: true,
-            data: {
-              extractedData: {
-                type: 'consultation',
-                data: { response: response.data },
-                confidence: 0.9,
-                timestamp: new Date().toISOString()
-              },
-              clarificationNeeded: false,
-              questions: [],
-              requiresAttention: false
-            }
-          };
+      const messages = [
+        {
+          role: 'system' as const,
+          content: systemPrompt
+        },
+        {
+          role: 'user' as const,
+          content: enrichedInput
         }
-      }
+      ];
 
-      return { success: false, error: response.error };
+      const response = await openaiService.chatCompletion(messages, userContext);
+
+      try {
+        return {
+          success: true,
+          data: JSON.parse(response || '{}')
+        };
+      } catch {
+        // Si no es JSON válido, tratar como respuesta de texto
+        return {
+          success: true,
+          data: {
+            extractedData: {
+              type: 'consultation',
+              data: { response: response },
+              confidence: 0.9,
+              timestamp: new Date().toISOString()
+            },
+            clarificationNeeded: false,
+            questions: [],
+            requiresAttention: false
+          }
+        };
+      }
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' };
     }
