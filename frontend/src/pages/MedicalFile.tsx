@@ -270,7 +270,7 @@ const MedicalFile: React.FC = () => {
         allergies: babyProfile.allergies
       };
 
-      const prompt = `Como pediatra experto con acceso a información médica actualizada, genera 5-8 hitos/milestones futuros personalizados para ${babyProfile.name}, un bebé de ${currentAge}.
+      const prompt = `Como pediatra experto especializado en desarrollo infantil, genera 5-8 hitos/milestones futuros personalizados para ${babyProfile.name}, un bebé de ${currentAge}.
 
 CONTEXTO ACTUAL DE ${babyProfile.name.toUpperCase()}:
 - Edad actual: ${currentAge}
@@ -279,62 +279,81 @@ CONTEXTO ACTUAL DE ${babyProfile.name.toUpperCase()}:
 - Altura actual: ${babyProfile.currentHeight ? `${babyProfile.currentHeight} cm` : 'No registrado'}
 - Hitos recientes: ${milestones.map(m => m.title).slice(0, 3).join(', ')}
 
-INSTRUCCIONES ESPECÍFICAS:
-Busca y usa información actualizada sobre:
-1. Calendario de vacunación español 2024-2025 más reciente
-2. Hitos de desarrollo neuromotor actualizados según AAP
-3. Recomendaciones nutricionales actuales para la edad
-4. Cuidados preventivos específicos por edad
-5. Controles pediátricos según protocolo español actual
+GENERA HITOS FUTUROS APROPIADOS PARA LA EDAD:
 
-GENERA HITOS QUE INCLUYAN:
-- Vacunaciones próximas según calendario español actualizado
-- Controles pediátricos específicos
-- Hitos de desarrollo esperados para la edad exacta
-- Cuidados preventivos basados en evidencia reciente
-- Alimentación y nutrición según guías actuales
-- Estimulación temprana recomendada
+VACUNACIONES (según calendario AEP España):
+- 2 meses: Hexavalente, Neumococo, Rotavirus
+- 4 meses: Hexavalente, Neumococo, Rotavirus  
+- 6 meses: Hexavalente, Neumococo, Rotavirus
+- 12 meses: Triple vírica, Neumococo, Meningococo C
+- 15 meses: Varicela
+- 18 meses: Hexavalente, Polio
 
-Para cada hito, incluye:
-- title: Título claro y específico
-- description: Descripción detallada con información actualizada
-- expectedAge: Edad esperada (ej: "4 meses", "6 meses")
+DESARROLLO NEUROMOTOR POR EDAD:
+- 2-3 meses: Sonrisa social, seguimiento visual, sostiene cabeza
+- 4-5 meses: Se gira, agarra objetos, balbucea
+- 6-7 meses: Se sienta con apoyo, transfiere objetos
+- 8-9 meses: Se sienta solo, gateo, pinza inferior
+- 10-12 meses: Se pone de pie, primeras palabras
+- 12-15 meses: Camina solo, torre de 2 cubos
+- 15-18 meses: Corre, 10-20 palabras, usa cuchara
+
+CONTROLES PEDIÁTRICOS:
+- Cada mes los primeros 6 meses
+- Cada 2 meses hasta el año
+- Cada 3 meses hasta los 2 años
+
+Para cada hito, genera:
+- title: Título específico y claro
+- description: Descripción detallada y práctica
+- expectedAge: Edad específica (ej: "4 meses", "6 meses")
 - priority: low/medium/high/critical
 - category: vaccination/development/medical_checkup/preventive_care
 
-IMPORTANTE: 
-- Usa información médica actualizada de 2024-2025
-- Considera la edad específica para precisión
-- Incluye fuentes de información cuando sea relevante
-- Sé específico con fechas y edades
-
-Responde SOLO en formato JSON array válido.`;
+FORMATO REQUERIDO - Responde SOLO un JSON array válido:
+[
+  {
+    "title": "ejemplo",
+    "description": "descripción detallada", 
+    "expectedAge": "X meses",
+    "priority": "medium",
+    "category": "vaccination"
+  }
+]`;
 
               const response = await openaiService.chatCompletion([
           { role: 'system', content: `Eres un pediatra experto especializado en desarrollo infantil y calendarios de vacunación españoles. 
 
-CAPACIDADES ESPECIALES:
-- Tienes acceso a información médica actualizada de 2024-2025
-- Conoces los protocolos más recientes de pediatría
-- Puedes consultar calendarios de vacunación actualizados
-- Tienes acceso a guías nutricionales y de desarrollo infantil actuales
-- Conoces las recomendaciones más recientes de la AEP (Asociación Española de Pediatría)
+OBJETIVO: Generar hitos/milestones futuros específicos y realistas para bebés.
 
-INSTRUCCIONES:
-- Usa siempre información médica actualizada y basada en evidencia
-- Considera las particularidades del sistema sanitario español
-- Sé específico con edades, fechas y recomendaciones
-- Incluye información sobre dónde encontrar más detalles cuando sea útil` },
+INSTRUCCIONES CLAVE:
+- Responde SIEMPRE en formato JSON array válido
+- Usa el calendario oficial AEP de vacunaciones
+- Considera la edad específica del bebé
+- Incluye hitos de desarrollo apropiados para la edad
+- Sé específico con las edades esperadas
+- Prioriza la seguridad y el bienestar del bebé
+
+FORMATO OBLIGATORIO: Array de objetos JSON con las propiedades exactas: title, description, expectedAge, priority, category` },
           { role: 'user', content: prompt }
         ]);
 
       try {
-        const aiMilestones = JSON.parse(response);
-        if (Array.isArray(aiMilestones)) {
+        // Clean the response to ensure it's valid JSON
+        let cleanResponse = response.trim();
+        if (cleanResponse.startsWith('```json')) {
+          cleanResponse = cleanResponse.replace(/```json\s*/, '').replace(/```\s*$/, '');
+        }
+        if (cleanResponse.startsWith('```')) {
+          cleanResponse = cleanResponse.replace(/```.*?\n/, '').replace(/```\s*$/, '');
+        }
+
+        const aiMilestones = JSON.parse(cleanResponse);
+        if (Array.isArray(aiMilestones) && aiMilestones.length > 0) {
           const newMilestones: FutureMilestone[] = aiMilestones.map((ai: any, index: number) => ({
             id: `ai_${Date.now()}_${index}`,
-            title: ai.title,
-            description: ai.description,
+            title: ai.title || `Hito ${index + 1}`,
+            description: ai.description || 'Consulta con tu pediatra para más información.',
             category: ai.category || 'medical_checkup',
             expectedAge: ai.expectedAge || 'Próximamente',
             expectedDate: new Date(Date.now() + (index + 1) * 30 * 24 * 60 * 60 * 1000), // Spread over coming months
@@ -350,16 +369,74 @@ INSTRUCCIONES:
           }));
 
           setFutureMilestones(prev => [...prev, ...newMilestones]);
+        } else {
+          throw new Error('No se generaron hitos válidos');
         }
       } catch (parseError) {
         console.error('Error parsing AI milestones:', parseError);
+        // Agregar hitos de fallback basados en la edad
+        addFallbackMilestones();
       }
 
     } catch (error) {
       console.error('Error generating AI milestones:', error);
+      // Usar fallback si hay error general
+      addFallbackMilestones();
     } finally {
       setIsGeneratingMilestones(false);
     }
+  };
+
+  const addFallbackMilestones = () => {
+    if (!babyProfile) return;
+
+    const birthDate = new Date(babyProfile.dateOfBirth);
+    const currentDate = new Date();
+    const ageInMonths = Math.floor((currentDate.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+
+    const fallbackMilestones: FutureMilestone[] = [];
+
+    // Generar hitos basados en la edad actual
+    const upcomingAges = [ageInMonths + 1, ageInMonths + 2, ageInMonths + 3, ageInMonths + 6, ageInMonths + 12];
+
+    upcomingAges.forEach((targetAge, index) => {
+      if (targetAge <= 24) { // Solo hasta 2 años
+        let milestone: Partial<FutureMilestone> = {
+          id: `fallback_${Date.now()}_${index}`,
+          status: 'pending',
+          dynamicallyGenerated: true,
+          source: 'fallback',
+          confidence: 0.7,
+          reminderSet: false,
+          dismissed: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          expectedDate: new Date(birthDate.getTime() + targetAge * 30.44 * 24 * 60 * 60 * 1000),
+          expectedAge: `${targetAge} meses`
+        };
+
+        // Asignar hitos específicos por edad
+        if (targetAge === 2) {
+          milestone = { ...milestone, title: "Primera vacunación - 2 meses", description: "Vacuna hexavalente, neumococo y rotavirus. Programar cita con pediatra.", category: "vaccination", priority: "high" };
+        } else if (targetAge === 4) {
+          milestone = { ...milestone, title: "Segunda vacunación - 4 meses", description: "Segunda dosis de hexavalente, neumococo y rotavirus.", category: "vaccination", priority: "high" };
+        } else if (targetAge === 6) {
+          milestone = { ...milestone, title: "Tercera vacunación - 6 meses", description: "Tercera dosis de hexavalente, neumococo y rotavirus. Inicio de alimentación complementaria.", category: "vaccination", priority: "high" };
+        } else if (targetAge === 12) {
+          milestone = { ...milestone, title: "Vacunaciones del año", description: "Triple vírica, neumococo y meningococo C. Revisión del desarrollo.", category: "vaccination", priority: "high" };
+        } else if (targetAge >= 2 && targetAge <= 6) {
+          milestone = { ...milestone, title: "Control pediátrico", description: "Revisión de peso, talla y desarrollo. Evaluación del crecimiento.", category: "medical_checkup", priority: "medium" };
+        } else if (targetAge >= 6 && targetAge <= 12) {
+          milestone = { ...milestone, title: "Desarrollo motor", description: "Evaluación de hitos motores: sedestación, gateo, bipedestación.", category: "development", priority: "medium" };
+        } else {
+          milestone = { ...milestone, title: "Revisión pediátrica", description: "Control rutinario de salud y desarrollo.", category: "medical_checkup", priority: "medium" };
+        }
+
+        fallbackMilestones.push(milestone as FutureMilestone);
+      }
+    });
+
+    setFutureMilestones(prev => [...prev, ...fallbackMilestones]);
   };
 
   const updateProfile = (updates: Partial<BabyProfile>) => {

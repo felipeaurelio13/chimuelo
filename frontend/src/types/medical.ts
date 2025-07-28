@@ -81,7 +81,7 @@ export interface FutureMilestone {
   
   // AI Enhanced
   dynamicallyGenerated: boolean;
-  source: 'standard_calendar' | 'ai_recommended' | 'doctor_recommended';
+  source: 'standard_calendar' | 'ai_recommended' | 'doctor_recommended' | 'fallback';
   confidence: number;
   
   // Actions
