@@ -8,14 +8,14 @@
     <meta name="theme-color" content="#4F46E5" />
     
     <!-- PWA Meta Tags -->
-    <link rel="manifest" href="./manifest.json" />
+    <link rel="manifest" href="/chimuelo/manifest.json" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Chimuelo" />
     
     <!-- Apple Icons -->
-    <link rel="apple-touch-icon" href="./icon-192x192.png" />
+    <link rel="apple-touch-icon" href="/chimuelo/icon-192x192.png" />
     
     <title>Chimuelo - Salud Infantil Inteligente</title>
     
@@ -28,7 +28,7 @@
             return s.replace(/~and~/g, '&')
           }).join('?');
           window.history.replaceState(null, null,
-              l.pathname.slice(0, -1) + decoded + l.hash
+              l.pathname + decoded + l.hash
           );
         }
       }(window.location))
