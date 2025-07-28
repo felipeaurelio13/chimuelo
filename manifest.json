@@ -1,0 +1,147 @@
+{
+  "name": "Chimuelo Health Tracker",
+  "short_name": "Chimuelo",
+  "description": "Aplicación inteligente para el seguimiento de la salud de tu bebé con IA avanzada",
+  "version": "1.0.0",
+  "start_url": "/chimuelo/",
+  "scope": "/chimuelo/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0d6efd",
+  "background_color": "#ffffff",
+  "lang": "es-ES",
+  "dir": "ltr",
+  "categories": ["health", "medical", "productivity", "lifestyle"],
+  "icons": [
+    {
+      "src": "/chimuelo/chimuelo-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/chimuelo/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/chimuelo/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/chimuelo/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Dashboard principal con timeline de salud"
+    },
+    {
+      "src": "/chimuelo/screenshot-mobile.png", 
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Vista móvil del chat con IA"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Capturar datos",
+      "short_name": "Capturar",
+      "description": "Registrar nuevos datos de salud",
+      "url": "/chimuelo/capture",
+      "icons": [
+        {
+          "src": "/chimuelo/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Timeline",
+      "short_name": "Timeline",
+      "description": "Ver historial de salud",
+      "url": "/chimuelo/timeline", 
+      "icons": [
+        {
+          "src": "/chimuelo/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Chat IA",
+      "short_name": "Chat",
+      "description": "Consultar con asistente de IA",
+      "url": "/chimuelo/chat",
+      "icons": [
+        {
+          "src": "/chimuelo/icon-192x192.png",
+          "sizes": "192x192", 
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+health",
+      "url": "/chimuelo/capture?data=%s"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "handle_links": "auto",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "file_handlers": [
+    {
+      "action": "/chimuelo/capture",
+      "accept": {
+        "image/*": [".jpg", ".jpeg", ".png", ".gif", ".webp"],
+        "text/plain": [".txt"],
+        "application/pdf": [".pdf"]
+      },
+      "launch_type": "single-client"
+    }
+  ],
+  "share_target": {
+    "action": "/chimuelo/capture",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "images",
+          "accept": ["image/*"]
+        }
+      ]
+    }
+  },
+  "permissions": [
+    "camera",
+    "microphone",
+    "notifications",
+    "persistent-storage",
+    "background-sync"
+  ],
+  "features": [
+    "cross-origin-isolated"
+  ],
+  "display_override": ["window-controls-overlay", "minimal-ui"],
+  "id": "/chimuelo/",
+  "iarc_rating_id": "suitable-for-children"
+}
