@@ -6,6 +6,8 @@ import apiService from '../services/apiService';
 import SchemaService from '../services/schemas';
 import { contextAwareAICoordinator as contextAwareAI } from '../services/aiCoordinator';
 import { type HealthRecord } from '../services/databaseService';
+import { type ProcessingResult } from '../services/aiAgents';
+import AgentConversationViewer from '../components/AgentConversationViewer';
 import '../styles/Capture.css';
 
 interface CaptureData {
@@ -75,9 +77,10 @@ const Capture: React.FC = () => {
   const [customDate, setCustomDate] = useState<string>('');
   
   // Multi-agent AI state
-  const [aiProcessingResult, setAiProcessingResult] = useState<any | null>(null);
+  const [aiProcessingResult, setAiProcessingResult] = useState<ProcessingResult | null>(null);
   const [showClarificationDialog, setShowClarificationDialog] = useState(false);
   const [userResponses, setUserResponses] = useState<{[question: string]: string}>({});
+  const [showAgentViewer, setShowAgentViewer] = useState(false);
   
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -975,12 +978,26 @@ const Capture: React.FC = () => {
             <div className="clarification-dialog elegant" onClick={e => e.stopPropagation()}>
               <div className="dialog-header">
                 <h3>🤔 Necesito aclarar algunos puntos</h3>
-                <button className="close-button" onClick={() => {
-                  setShowClarificationDialog(false);
-                  if (import.meta.env.VITE_DEV === 'TRUE') {
-                    console.log('Capture: Clarification dialog close button clicked.');
-                  }
-                }}>✕</button>
+                <div className="dialog-actions">
+                  <button 
+                    className="btn btn-secondary btn-sm" 
+                    onClick={() => {
+                      setShowAgentViewer(true);
+                      if (import.meta.env.VITE_DEV === 'TRUE') {
+                        console.log('Capture: Agent viewer button clicked.');
+                      }
+                    }}
+                    title="Ver detalles del procesamiento"
+                  >
+                    🤖 Ver proceso
+                  </button>
+                  <button className="close-button" onClick={() => {
+                    setShowClarificationDialog(false);
+                    if (import.meta.env.VITE_DEV === 'TRUE') {
+                      console.log('Capture: Clarification dialog close button clicked.');
+                    }
+                  }}>✕</button>
+                </div>
               </div>
               
               <div className="confidence-bar">
@@ -1223,6 +1240,15 @@ const Capture: React.FC = () => {
           </section>
         )}
       </div>
+
+      {/* Agent Conversation Viewer */}
+      <AgentConversationViewer
+        conversations={aiProcessingResult?.conversationLog}
+        processingSteps={aiProcessingResult?.processingSteps}
+        qualityMetrics={aiProcessingResult?.qualityMetrics}
+        isVisible={showAgentViewer}
+        onClose={() => setShowAgentViewer(false)}
+      />
     </div>
   );
 };

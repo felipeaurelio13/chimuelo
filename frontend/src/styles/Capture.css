@@ -325,6 +325,21 @@
   animation: slideUp 0.3s ease-out;
 }
 
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.dialog-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .clarification-title {
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
