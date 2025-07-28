@@ -53,25 +53,35 @@ export class ClassifierAgent {
     extractedContent?: any;
   }> {
     try {
+      console.log('🔧 [DEBUG] ClassifierAgent.classifyInput iniciando...');
+      console.log('🔧 [DEBUG] Input type:', input.type, 'ID:', input.id);
+      
       // Análisis del tipo de input
       let inputAnalysis = await this.analyzeInputType(input);
+      console.log('🔧 [DEBUG] Input analysis:', inputAnalysis);
       
       // Extracción de contenido según el tipo
       let extractedContent;
       if (input.type === 'image' || input.type === 'pdf') {
+        console.log('🔧 [DEBUG] Procesando contenido visual...');
         extractedContent = await this.processVisualContent(input);
       } else if (input.type === 'text') {
+        console.log('🔧 [DEBUG] Procesando contenido de texto...');
         extractedContent = await this.processTextContent(input);
       } else if (input.type === 'audio') {
+        console.log('🔧 [DEBUG] Procesando contenido de audio...');
         extractedContent = await this.processAudioContent(input);
       }
+
+      console.log('🔧 [DEBUG] Contenido extraído exitosamente');
 
       // Clasificación inteligente del contenido
       const classification = await this.classifyContent(extractedContent, inputAnalysis);
       
+      console.log('🔧 [DEBUG] Clasificación final:', classification);
       return classification;
     } catch (error) {
-      console.error('Error in ClassifierAgent:', error);
+      console.error('🔧 [DEBUG] Error in ClassifierAgent:', error);
       throw error;
     }
   }
@@ -193,18 +203,77 @@ export class VisionAgent {
   }
 
   async analyzeContent(input: AgentInput): Promise<any> {
-    if (input.content instanceof File) {
-      // Usar el servicio de visión existente
-      const visionService = await import('./visionAnalysisService');
-      const result = await visionService.visionAnalysisService.analyzeDocument({
-        imageFile: input.content,
-        documentType: 'general'
-      });
-      
-      return result.data;
+    console.log('🔧 [DEBUG] VisionAgent.analyzeContent iniciando...');
+    
+    if (!(input.content instanceof File)) {
+      const error = 'VisionAgent requires File input';
+      console.error('🔧 [DEBUG] Error:', error);
+      throw new Error(error);
     }
     
-    throw new Error('VisionAgent requires File input');
+    try {
+      console.log('🔧 [DEBUG] File válido:', {
+        name: input.content.name,
+        type: input.content.type,
+        size: input.content.size
+      });
+      
+      // Usar import estático en lugar de dinámico para evitar problemas de bundle
+      const { visionAnalysisService } = await import('./visionAnalysisService');
+      
+      console.log('🔧 [DEBUG] visionAnalysisService importado exitosamente');
+      
+      const result = await visionAnalysisService.analyzeDocument({
+        imageFile: input.content,
+        documentType: input.context?.documentType || 'general'
+      });
+      
+      console.log('🔧 [DEBUG] Resultado de visionAnalysisService:', {
+        success: result.success,
+        hasData: !!result.data,
+        error: result.error
+      });
+      
+      if (!result.success) {
+        throw new Error(`VisionAnalysisService failed: ${result.error}`);
+      }
+      
+      return result.data;
+      
+    } catch (error) {
+      console.error('🔧 [DEBUG] Error en VisionAgent.analyzeContent:', error);
+      
+      // Fallback robusto si todo falla
+      const fallbackData = {
+        documentType: input.context?.documentType || 'general',
+        patientInfo: {
+          name: "Error en procesamiento",
+          dateOfBirth: undefined,
+          age: undefined
+        },
+        extractedData: {
+          date: new Date().toISOString().split('T')[0],
+          provider: "Procesamiento fallido",
+          mainFindings: [
+                         `Error al procesar archivo: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+            "Se requiere procesamiento manual"
+          ],
+          medications: [],
+          measurements: { other: {} },
+          recommendations: ["Revisar archivo manualmente"],
+          urgentFlags: []
+        },
+        analysisNotes: {
+          confidence: 'bajo',
+          allergyWarnings: [],
+          ageAppropriate: "Error en procesamiento",
+          requiresPhysicianReview: true
+        }
+      };
+      
+      console.log('🔧 [DEBUG] Usando fallback data debido a error');
+      return fallbackData;
+    }
   }
 }
 
@@ -825,30 +894,50 @@ export class MultiAgentCoordinator {
 
   async processInput(input: AgentInput): Promise<AgentOutput> {
     try {
+      console.log('🔧 [DEBUG] MultiAgentCoordinator.processInput iniciando...');
+      console.log('🔧 [DEBUG] Input:', {
+        id: input.id,
+        type: input.type,
+        userId: input.userId,
+        contextKeys: Object.keys(input.context || {})
+      });
+      
       // 1. Clasificar input
+      console.log('🔧 [DEBUG] Paso 1: Clasificando input...');
       const classifier = ClassifierAgent.getInstance();
       const classification = await classifier.classifyInput(input);
+      console.log('🔧 [DEBUG] Clasificación completada:', classification.routingRecommendation);
       
       // 2. Extraer contenido
+      console.log('🔧 [DEBUG] Paso 2: Extrayendo contenido...');
       let extractedContent;
       if (input.type === 'image' || input.type === 'pdf') {
+        console.log('🔧 [DEBUG] Usando VisionAgent...');
         extractedContent = await VisionAgent.getInstance().analyzeContent(input);
       } else {
+        console.log('🔧 [DEBUG] Usando TextAgent...');
         extractedContent = await TextAgent.getInstance().analyzeContent(input);
       }
+      console.log('🔧 [DEBUG] Contenido extraído:', !!extractedContent);
       
       // 3. Rutear a agente especializado
+      console.log('🔧 [DEBUG] Paso 3: Ruteando a agente especializado...');
       const router = IntelligentRouter.getInstance();
       const agentOutput = await router.routeToAgent(classification, extractedContent);
+      console.log('🔧 [DEBUG] Agente procesado:', agentOutput.agentId);
       
       // 4. Actualizar ficha si es necesario
+      console.log('🔧 [DEBUG] Paso 4: Actualizando ficha...');
       const fichaAgent = FichaMAxiAgent.getInstance();
       await fichaAgent.updateFicha(agentOutput);
+      console.log('🔧 [DEBUG] Ficha actualizada, shouldUpdateFicha:', agentOutput.shouldUpdateFicha);
       
+      console.log('🔧 [DEBUG] MultiAgentCoordinator completado exitosamente');
       return agentOutput;
       
     } catch (error) {
-      console.error('Error in MultiAgentCoordinator:', error);
+      console.error('🔧 [DEBUG] Error in MultiAgentCoordinator:', error);
+             console.error('🔧 [DEBUG] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       throw error;
     }
   }

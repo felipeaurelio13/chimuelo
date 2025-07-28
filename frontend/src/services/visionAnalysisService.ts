@@ -385,6 +385,38 @@ IMPORTANTE:
    * Validates image/document file for medical analysis
    */
   public validateImageFile(file: File): { valid: boolean; error?: string } {
+    console.log('🔧 [DEBUG] validateImageFile iniciando...', {
+      name: file?.name,
+      type: file?.type,
+      size: file?.size
+    });
+    
+    // Robust file object validation
+    if (!file || typeof file !== 'object') {
+      const error = 'Objeto de archivo no válido o undefined';
+      console.error('🔧 [DEBUG] Validation error:', error);
+      return { valid: false, error };
+    }
+    
+    if (!(file instanceof File)) {
+      const error = 'El objeto no es una instancia válida de File';
+      console.error('🔧 [DEBUG] Validation error:', error);
+      return { valid: false, error };
+    }
+    
+    // Check required properties
+    if (typeof file.type !== 'string') {
+      const error = 'Tipo de archivo no definido';
+      console.error('🔧 [DEBUG] Validation error:', error);
+      return { valid: false, error };
+    }
+    
+    if (typeof file.size !== 'number' || file.size < 0) {
+      const error = 'Tamaño de archivo no válido';
+      console.error('🔧 [DEBUG] Validation error:', error);
+      return { valid: false, error };
+    }
+    
     // Check file type - support images and PDFs
     const allowedTypes = [
       'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
@@ -392,29 +424,34 @@ IMPORTANTE:
     ];
     
     if (!allowedTypes.includes(file.type)) {
-      return {
-        valid: false,
-        error: 'Tipo de archivo no soportado. Use JPEG, PNG, WebP o PDF.'
-      };
+      const error = `Tipo de archivo no soportado: ${file.type}. Use JPEG, PNG, WebP o PDF.`;
+      console.error('🔧 [DEBUG] Validation error:', error);
+      return { valid: false, error };
     }
 
     // Check file size (max 20MB for vision API)
     const maxSize = 20 * 1024 * 1024; // 20MB
     if (file.size > maxSize) {
-      return {
-        valid: false,
-        error: 'El archivo es demasiado grande. Máximo 20MB.'
-      };
+      const error = `El archivo es demasiado grande: ${(file.size / 1024 / 1024).toFixed(2)}MB. Máximo 20MB.`;
+      console.error('🔧 [DEBUG] Validation error:', error);
+      return { valid: false, error };
+    }
+
+    // Check minimum file size (avoid empty files)
+    if (file.size === 0) {
+      const error = 'El archivo está vacío';
+      console.error('🔧 [DEBUG] Validation error:', error);
+      return { valid: false, error };
     }
 
     // Additional validation for file integrity
-    if (!file.name || file.name.trim() === '') {
-      return {
-        valid: false,
-        error: 'Nombre de archivo no válido.'
-      };
+    if (!file.name || typeof file.name !== 'string' || file.name.trim() === '') {
+      const error = 'Nombre de archivo no válido o vacío';
+      console.error('🔧 [DEBUG] Validation error:', error);
+      return { valid: false, error };
     }
 
+    console.log('🔧 [DEBUG] File validation successful');
     return { valid: true };
   }
 
