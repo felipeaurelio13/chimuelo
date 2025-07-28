@@ -10,7 +10,7 @@ const STATIC_CACHE_FILES = [
   '/manifest.json',
   '/icon-192x192.png',
   '/icon-512x512.png',
-  '/chimuelo-icon.svg',
+  '/chimuelo/chimuelo-icon.svg',
   // Los archivos de build se añadirán dinámicamente
 ];
 
@@ -379,7 +379,7 @@ self.addEventListener('push', (event) => {
   const options = {
     body: 'Tienes nuevos datos de salud disponibles',
     icon: '/icon-192x192.png',
-    badge: '/chimuelo-icon.svg',
+    badge: '/chimuelo/chimuelo-icon.svg',
     tag: 'health-update',
     renotify: true,
     actions: [

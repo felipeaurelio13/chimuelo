@@ -70,6 +70,11 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 };
 
+// Handle CORS preflight
+router.options('*', () => {
+  return new Response(null, { headers: corsHeaders });
+});
+
 // Utility functions
 function generateErrorResponse(message: string, status = 500) {
   return new Response(JSON.stringify({
@@ -149,23 +154,23 @@ async function checkRateLimit(env: Env, endpoint: string, userId: string): Promi
   return true;
 }
 
-// Middleware: CORS handler
-function handleCORS(request: IRequest) {
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { status: 200, headers: corsHeaders });
-  }
-}
-
-// Apply CORS to all routes
-router.all('*', handleCORS);
+// CORS is handled by the OPTIONS route above and corsHeaders in responses
 
 // Health check
-router.get('/health', () => {
-  return generateSuccessResponse({
-    message: 'Chimuelo Worker is healthy',
-    version: '1.0.0',
-    features: ['openai', 'search', 'rate-limiting']
-  });
+router.get('/health', (request: IRequest, env: Env) => {
+  try {
+    const hasOpenAI = !!env.OPENAI_API_KEY;
+    return generateSuccessResponse({
+      message: 'Chimuelo Worker is healthy',
+      version: '1.0.0',
+      features: ['openai', 'search', 'rate-limiting'],
+      openai_configured: hasOpenAI,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: any) {
+    console.error('Health check error:', error);
+    return generateErrorResponse('Health check failed: ' + error.message, 500);
+  }
 });
 
 // OpenAI Data Extraction
