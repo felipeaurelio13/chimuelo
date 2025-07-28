@@ -1,0 +1,2 @@
+# This file disables Jekyll processing for GitHub Pages
+# Chimuelo is a React/Vite SPA that needs to serve static files directly
