@@ -182,48 +182,50 @@ class APIService {
     }
   }
 
-  // Chat con respuestas predefinidas basadas en contexto
+  // Chat completions usando OpenAI real via Worker
   async chatCompletion(request: ChatRequest): Promise<APIResponse> {
     try {
-      console.log('APIService: Processing chat request');
+      console.log('APIService: Processing chat request with real AI');
       
-      // Simular delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Import dinámico para evitar dependencias circulares
+      const { default: openaiService } = await import('./openaiService');
       
-      const lastMessage = request.messages[request.messages.length - 1]?.content.toLowerCase() || '';
-      let response = '';
+      // Verificar disponibilidad del Worker
+      const isAvailable = await openaiService.isAvailable();
+      if (!isAvailable) {
+        throw new Error('El servicio de IA no está disponible. Verifica tu conexión.');
+      }
 
-      // Respuestas contextuales basadas en palabras clave
-      if (lastMessage.includes('fiebre')) {
-        response = 'Para la fiebre en bebés:\n\n' +
-          '• Si tiene menos de 3 meses y fiebre mayor a 38°C, consulta inmediatamente al pediatra\n' +
-          '• Entre 3-6 meses: consulta si supera los 38.5°C\n' +
-          '• Mantén al bebé hidratado\n' +
-          '• Viste con ropa ligera\n' +
-          '• Puedes usar paracetamol según indicación médica\n\n' +
-          'Siempre consulta con tu pediatra ante cualquier duda.';
-      } else if (lastMessage.includes('peso') || lastMessage.includes('alimenta')) {
-        response = 'Sobre el peso y alimentación:\n\n' +
-          '• Los bebés suelen duplicar su peso de nacimiento a los 5 meses\n' +
-          '• La lactancia exclusiva se recomienda hasta los 6 meses\n' +
-          '• El peso debe evaluarse junto con la talla y el perímetro cefálico\n' +
-          '• Cada bebé tiene su ritmo de crecimiento\n\n' +
-          'Consulta las curvas de crecimiento con tu pediatra.';
-      } else if (lastMessage.includes('vacuna')) {
-        response = 'Calendario de vacunación:\n\n' +
-          '• Al nacer: BCG y Hepatitis B\n' +
-          '• 2 meses: Pentavalente, Polio, Rotavirus, Neumococo\n' +
-          '• 4 meses: Segunda dosis de las anteriores\n' +
-          '• 6 meses: Tercera dosis e Influenza\n' +
-          '• 12 meses: SRP, Varicela, Hepatitis A\n\n' +
-          'Mantén al día el carnet de vacunación.';
-      } else {
-        response = 'Entiendo tu consulta. Como asistente de salud infantil, te recomiendo:\n\n' +
-          '• Llevar un registro detallado de síntomas\n' +
-          '• Observar cambios en el comportamiento\n' +
-          '• Mantener comunicación con tu pediatra\n' +
-          '• No automedicar\n\n' +
-          'Para información más específica, por favor proporciona más detalles o consulta directamente con un profesional de la salud.';
+      // Preparar mensajes con contexto médico
+      const systemPrompt = `Eres un asistente médico especializado en pediatría y salud infantil. 
+      
+IMPORTANTE:
+- Proporciona información precisa y útil sobre el cuidado de bebés
+- Siempre recomienda consultar con un pediatra para temas médicos serios
+- Sé empático y comprensivo con los padres
+- Usa un lenguaje claro y comprensible
+- Si no estás seguro de algo, dilo claramente
+- Nunca diagnostiques ni recetes medicamentos
+- Enfócate en orientación y primeros auxilios básicos
+
+Si el usuario proporciona contexto (datos previos del bebé), úsalo para dar respuestas más personalizadas.`;
+
+      const messages = [
+        {
+          role: 'system' as const,
+          content: systemPrompt
+        },
+        ...request.messages.map(msg => ({
+          role: msg.role as 'user' | 'assistant' | 'system',
+          content: msg.content
+        }))
+      ];
+
+      // Llamar al servicio OpenAI real
+      const response = await openaiService.chatCompletion(messages, request.context);
+      
+      if (!response) {
+        throw new Error('No se recibió respuesta del servicio de IA');
       }
 
       // Guardar en historial

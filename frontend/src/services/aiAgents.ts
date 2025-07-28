@@ -1,4 +1,4 @@
-// Sistema de Agentes de IA Especializados - Versión 2.0 Mejorada
+// Sistema de Agentes de IA Especializados - Versión 3.0 Mejorada
 // Basado en mejores prácticas de OpenAI y papers de medical AI
 
 import openaiService from './openaiService';
@@ -10,7 +10,9 @@ export interface AgentResponse {
   questions?: string[];
   suggestions?: string[];
   requiresConfirmation?: boolean;
-  reasoning?: string[]; // Nuevo: cadena de razonamiento
+  reasoning?: string[]; // Cadena de razonamiento paso a paso
+  concerns?: string[]; // Preocupaciones o dudas
+  supportingEvidence?: string[]; // Evidencia que soporta la conclusión
 }
 
 export interface ProcessingResult {
@@ -21,7 +23,9 @@ export interface ProcessingResult {
   questions: string[];
   suggestions: string[];
   agentResponses: AgentResponse[];
-  conversationLog?: AgentConversation[]; // Nuevo: log de conversación entre agentes
+  conversationLog?: AgentConversation[]; // Log completo de conversación
+  processingSteps?: ProcessingStep[]; // Pasos detallados
+  qualityMetrics?: QualityMetrics; // Métricas de calidad
 }
 
 export interface AgentConversation {
@@ -29,6 +33,28 @@ export interface AgentConversation {
   to: string;
   message: string;
   timestamp: string;
+  messageType: 'analysis' | 'question' | 'concern' | 'consensus' | 'disagreement';
+  confidence?: number;
+}
+
+export interface ProcessingStep {
+  step: number;
+  agentName: string;
+  action: string;
+  input: string;
+  output: string;
+  confidence: number;
+  timestamp: string;
+  reasoningChain?: string[];
+}
+
+export interface QualityMetrics {
+  overallConfidence: number;
+  consensusStrength: number;
+  evidenceQuality: number;
+  completeness: number;
+  riskAssessment: 'low' | 'medium' | 'high';
+  recommendedActions?: string[];
 }
 
 // Utilidades compartidas para mejor detección
@@ -52,6 +78,78 @@ class TextProcessingUtils {
     const start = Math.max(0, index - windowSize);
     const end = Math.min(text.length, index + match.length + windowSize);
     return text.substring(start, end);
+  }
+  
+  // Normaliza valores numéricos
+  static normalizeNumber(text: string): number | null {
+    const cleaned = text.replace(/[^\d.,]/g, '').replace(',', '.');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? null : num;
+  }
+  
+  // Detecta fechas con mayor precisión
+  static extractDate(text: string): Date | null {
+    const now = new Date();
+    
+    // Patrones relativos
+    if (/\bayer\b/i.test(text)) {
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      return yesterday;
+    }
+    
+    if (/\banteayer\b|antes de ayer/i.test(text)) {
+      const dayBefore = new Date(now);
+      dayBefore.setDate(dayBefore.getDate() - 2);
+      return dayBefore;
+    }
+    
+    if (/hace (\d+) días?/i.test(text)) {
+      const match = text.match(/hace (\d+) días?/i);
+      if (match) {
+        const days = parseInt(match[1]);
+        const date = new Date(now);
+        date.setDate(date.getDate() - days);
+        return date;
+      }
+    }
+    
+    // Fechas explícitas (múltiples formatos)
+    const patterns = [
+      /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/,
+      /(\d{1,2}) de (\w+) de (\d{4})/i,
+      /(\d{1,2})\/(\d{1,2})/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match) {
+        try {
+          if (pattern === patterns[1]) {
+            // Formato "día de mes de año"
+            const months = {
+              'enero': 0, 'febrero': 1, 'marzo': 2, 'abril': 3,
+              'mayo': 4, 'junio': 5, 'julio': 6, 'agosto': 7,
+              'septiembre': 8, 'octubre': 9, 'noviembre': 10, 'diciembre': 11
+            };
+            const month = months[match[2].toLowerCase() as keyof typeof months];
+            if (month !== undefined) {
+              return new Date(parseInt(match[3]), month, parseInt(match[1]));
+            }
+          } else {
+            const day = parseInt(match[1]);
+            const month = parseInt(match[2]) - 1;
+            const year = match[3] ? parseInt(match[3]) : now.getFullYear();
+            const fullYear = year < 100 ? 2000 + year : year;
+            return new Date(fullYear, month, day);
+          }
+        } catch {
+          continue;
+        }
+      }
+    }
+    
+    return null;
   }
 }
 
@@ -435,12 +533,13 @@ class DocumentAnalyzerV2 {
 class ConversationCoordinator {
   private conversationLog: AgentConversation[] = [];
   
-  logMessage(from: string, to: string, message: string) {
+  logMessage(from: string, to: string, message: string, messageType: 'analysis' | 'question' | 'concern' | 'consensus' | 'disagreement' = 'analysis') {
     this.conversationLog.push({
       from,
       to,
       message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      messageType
     });
   }
   
@@ -466,6 +565,10 @@ class ConversationCoordinator {
   
   getConversationLog(): AgentConversation[] {
     return this.conversationLog;
+  }
+  
+  clearLog(): void {
+    this.conversationLog = [];
   }
 }
 
@@ -740,10 +843,12 @@ class IntelligentClassifier {
   }
 }
 
-// Coordinador Principal Mejorado v2
+// Coordinador Principal Mejorado v3 - Con mejor logging y conversaciones
 export class AIProcessingCoordinatorV2 {
   private agents: any[];
   private conversationCoordinator: ConversationCoordinator;
+  private processingSteps: ProcessingStep[] = [];
+  private qualityMetrics: QualityMetrics;
   
   constructor() {
     this.agents = [
@@ -754,30 +859,144 @@ export class AIProcessingCoordinatorV2 {
       new IntelligentClassifier() // Reutilizar el existente
     ];
     this.conversationCoordinator = new ConversationCoordinator();
+    this.qualityMetrics = {
+      overallConfidence: 0,
+      consensusStrength: 0,
+      evidenceQuality: 0,
+      completeness: 0,
+      riskAssessment: 'low'
+    };
+  }
+
+  // Método para logging detallado de pasos
+  private logProcessingStep(
+    step: number, 
+    agentName: string, 
+    action: string, 
+    input: string, 
+    output: any, 
+    confidence: number,
+    reasoningChain?: string[]
+  ): void {
+    const processingStep: ProcessingStep = {
+      step,
+      agentName,
+      action,
+      input: input.substring(0, 100) + (input.length > 100 ? '...' : ''),
+      output: JSON.stringify(output).substring(0, 200) + (JSON.stringify(output).length > 200 ? '...' : ''),
+      confidence,
+      timestamp: new Date().toISOString(),
+      reasoningChain
+    };
+    
+    this.processingSteps.push(processingStep);
+    
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log(`🤖 [${agentName}] Paso ${step}: ${action}`, {
+        confidence: `${Math.round(confidence * 100)}%`,
+        reasoning: reasoningChain?.slice(0, 2)
+      });
+    }
+  }
+
+  // Método para calcular métricas de calidad
+  private calculateQualityMetrics(agentResponses: AgentResponse[]): QualityMetrics {
+    const confidences = agentResponses.map(r => r.confidence);
+    const overallConfidence = confidences.reduce((a, b) => a + b, 0) / confidences.length;
+    
+    // Calcular consenso (¿están de acuerdo los agentes?)
+    const highConfidenceCount = agentResponses.filter(r => r.confidence > 0.7).length;
+    const consensusStrength = highConfidenceCount / agentResponses.length;
+    
+    // Evaluar calidad de evidencia
+    const evidenceCount = agentResponses.reduce((count, r) => 
+      count + (r.supportingEvidence?.length || 0), 0);
+    const evidenceQuality = Math.min(evidenceCount / 10, 1); // Normalizar a 0-1
+    
+    // Evaluar completitud
+    const hasFindings = agentResponses.some(r => r.findings && Object.keys(r.findings).length > 0);
+    const hasRecommendations = agentResponses.some(r => r.suggestions && r.suggestions.length > 0);
+    const completeness = (hasFindings ? 0.5 : 0) + (hasRecommendations ? 0.5 : 0);
+    
+    // Evaluar riesgo basado en concerns
+    const totalConcerns = agentResponses.reduce((count, r) => 
+      count + (r.concerns?.length || 0), 0);
+    let riskAssessment: 'low' | 'medium' | 'high' = 'low';
+    if (totalConcerns > 2) riskAssessment = 'medium';
+    if (totalConcerns > 4 || agentResponses.some(r => r.requiresConfirmation)) riskAssessment = 'high';
+    
+    return {
+      overallConfidence,
+      consensusStrength,
+      evidenceQuality,
+      completeness,
+      riskAssessment,
+      recommendedActions: this.generateRecommendedActions(agentResponses, riskAssessment)
+    };
+  }
+
+  private generateRecommendedActions(agentResponses: AgentResponse[], riskAssessment: string): string[] {
+    const actions: string[] = [];
+    
+    if (riskAssessment === 'high') {
+      actions.push('Revisar con un profesional médico');
+      actions.push('Monitorear síntomas de cerca');
+    }
+    
+    if (agentResponses.some(r => r.confidence < 0.5)) {
+      actions.push('Solicitar información adicional');
+      actions.push('Tomar mediciones más precisas');
+    }
+    
+    if (agentResponses.some(r => r.questions && r.questions.length > 0)) {
+      actions.push('Responder preguntas de clarificación');
+    }
+    
+    return actions;
   }
   
   async processInput(input: string, metadata?: any): Promise<ProcessingResult> {
-    console.log('🧠 Iniciando procesamiento multi-agente v2');
+    console.log('🧠 Iniciando procesamiento multi-agente v3 - Logging mejorado');
+    
+    // Limpiar logs previos
+    this.processingSteps = [];
+    this.conversationCoordinator.clearLog();
     
     const agentResponses: AgentResponse[] = [];
     const allFindings: any[] = [];
+    let stepCounter = 1;
     
-    // Fase 1: Análisis individual mejorado
+    // Fase 1: Análisis individual mejorado con logging detallado
     for (const agent of this.agents) {
       let response;
       
       try {
+        console.log(`✅ ${agent.name}: Analizando...`);
+        
         if (agent.name === 'Validador de Contexto' || agent.name === 'Clasificador Inteligente') {
           response = await agent.analyze(input, allFindings);
         } else {
           response = await agent.analyze(input);
         }
         
+        // Log detallado del paso
+        this.logProcessingStep(
+          stepCounter++,
+          agent.name,
+          'Análisis individual',
+          input,
+          response,
+          response.confidence,
+          response.reasoning
+        );
+        
         agentResponses.push(response);
         allFindings.push(response.findings);
         
-        // Log de conversación
-        if (response.reasoning) {
+        console.log(`✅ ${agent.name}: Confianza ${Math.round(response.confidence * 100)}%`);
+        
+        // Log de conversación con más detalle
+        if (response.reasoning && response.reasoning.length > 0) {
           this.conversationCoordinator.logMessage(
             agent.name,
             'Sistema',
@@ -826,6 +1045,19 @@ export class AIProcessingCoordinatorV2 {
     
     const clarificationNeeded = questions.length > 0 || weightedConfidence < 0.5;
     
+    // Calcular métricas de calidad
+    this.qualityMetrics = this.calculateQualityMetrics(agentResponses);
+    
+    // Log final del procesamiento
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('📊 Métricas de calidad:', {
+        confianza: `${Math.round(this.qualityMetrics.overallConfidence * 100)}%`,
+        consenso: `${Math.round(this.qualityMetrics.consensusStrength * 100)}%`,
+        completitud: `${Math.round(this.qualityMetrics.completeness * 100)}%`,
+        riesgo: this.qualityMetrics.riskAssessment
+      });
+    }
+
     return {
       finalData: consolidatedData,
       confidence: weightedConfidence,
@@ -834,7 +1066,9 @@ export class AIProcessingCoordinatorV2 {
       questions,
       suggestions,
       agentResponses,
-      conversationLog: this.conversationCoordinator.getConversationLog()
+      conversationLog: this.conversationCoordinator.getConversationLog(),
+      processingSteps: this.processingSteps,
+      qualityMetrics: this.qualityMetrics
     };
   }
   
