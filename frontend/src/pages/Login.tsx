@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import Logo from '../components/Logo';
 import '../styles/Auth.css';
 
 const Login: React.FC = () => {
@@ -118,10 +119,10 @@ const Login: React.FC = () => {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <div className="auth-logo">
-            <span className="logo-icon">👶</span>
-            <h1 className="logo-title">Maxi</h1>
-          </div>
+                <div className="auth-logo">
+        <Logo size="large" variant="animated" />
+        <h1 className="logo-title">Chimuelo</h1>
+      </div>
           <p className="auth-subtitle">Inicia sesión en tu cuenta</p>
         </div>
 

@@ -1,0 +1,195 @@
+/* Estilos para el componente Logo */
+
+.logo-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.logo-svg {
+  width: 100%;
+  height: 100%;
+  transition: all 0.3s ease;
+}
+
+/* Tamaños del logo */
+.logo-small {
+  width: 32px;
+  height: 32px;
+}
+
+.logo-medium {
+  width: 48px;
+  height: 48px;
+}
+
+.logo-large {
+  width: 64px;
+  height: 64px;
+}
+
+.logo-xlarge {
+  width: 96px;
+  height: 96px;
+}
+
+/* Variantes del logo */
+.logo-default {
+  /* Estilo por defecto */
+}
+
+.logo-minimal .stethoscope-secondary,
+.logo-minimal .pulse-dot,
+.logo-minimal .logo-border {
+  opacity: 0.3;
+}
+
+.logo-minimal .heart-highlight,
+.logo-minimal .cross-highlight {
+  opacity: 0.2;
+}
+
+.logo-animated {
+  animation: logoFloat 3s ease-in-out infinite;
+}
+
+.logo-animated .heart-main {
+  animation: heartBeat 1.5s ease-in-out infinite;
+}
+
+.logo-animated .stethoscope-main {
+  animation: stethoscopePulse 2s ease-in-out infinite;
+}
+
+.logo-animated .cross-container {
+  animation: crossGlow 2.5s ease-in-out infinite;
+}
+
+/* Animaciones */
+@keyframes logoFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes heartBeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes stethoscopePulse {
+  0%, 100% {
+    opacity: 0.95;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes crossGlow {
+  0%, 100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Efectos hover */
+.logo-container:hover {
+  transform: scale(1.05);
+  filter: brightness(1.1);
+}
+
+.logo-container:hover .heart-main {
+  animation: heartBeat 0.8s ease-in-out infinite;
+}
+
+.logo-container:hover .stethoscope-main {
+  animation: stethoscopePulse 1.5s ease-in-out infinite;
+}
+
+/* Efectos de focus para accesibilidad */
+.logo-container:focus {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .logo-large {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .logo-xlarge {
+    width: 80px;
+    height: 80px;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo-large {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .logo-xlarge {
+    width: 64px;
+    height: 64px;
+  }
+}
+
+/* Modo oscuro */
+@media (prefers-color-scheme: dark) {
+  .logo-container {
+    filter: brightness(1.1);
+  }
+  
+  .logo-container:hover {
+    filter: brightness(1.2);
+  }
+}
+
+/* Efectos especiales para variantes */
+.logo-minimal:hover {
+  transform: scale(1.02);
+}
+
+.logo-animated:hover {
+  animation: logoFloat 2s ease-in-out infinite;
+}
+
+/* Transiciones suaves */
+.logo-container * {
+  transition: all 0.2s ease;
+}
+
+/* Optimización para pantallas de alta densidad */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .logo-svg {
+    shape-rendering: geometricPrecision;
+  }
+}
+
+/* Soporte para reduce-motion */
+@media (prefers-reduced-motion: reduce) {
+  .logo-animated,
+  .logo-animated *,
+  .pulse-dot {
+    animation: none;
+  }
+  
+  .logo-container:hover {
+    transform: none;
+  }
+}
