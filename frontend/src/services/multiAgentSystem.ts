@@ -353,9 +353,8 @@ export class AudioAgent {
   }
 
   async analyzeContent(input: AgentInput): Promise<any> {
-    // Placeholder para futuro procesamiento de audio
     return {
-      message: 'Audio processing not yet implemented',
+      message: 'Procesamiento de audio en desarrollo',
       type: 'audio',
       requiresTranscription: true
     };
