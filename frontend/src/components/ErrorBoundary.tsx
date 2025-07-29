@@ -40,13 +40,16 @@ class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
 
-      // Fallback por defecto
+      // Fallback por defecto con mensaje más descriptivo
       return (
         <div className="error-boundary">
           <div className="error-content">
             <h2>😔 Algo salió mal</h2>
-            <p>Ocurrió un error inesperado. Por favor, recarga la página.</p>
-            <button 
+            <p>
+              {this.state.error?.message ||
+                'Ocurrió un error inesperado. Por favor, recarga la página.'}
+            </p>
+            <button
               onClick={() => window.location.reload()}
               className="reload-button"
             >
