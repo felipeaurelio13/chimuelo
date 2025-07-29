@@ -499,7 +499,7 @@ const Capture: React.FC = () => {
           birthHeight: user?.birthHeight
         },
         recentRecords: await getRecentHealthRecords(7), // Últimos 7 días
-        currentStats: await getCurrentHealthStats()
+        currentStats: await getCurrentHealthStats() || undefined
       };
       
       // Usar el coordinador de IA con contexto real

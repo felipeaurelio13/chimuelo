@@ -126,6 +126,14 @@ export interface AppSettings {
   updatedAt: Date;
 }
 
+export interface HealthStats {
+  totalRecords: number;
+  recordsByType: Record<string, number>;
+  alertsCount: number;
+  lastRecord?: HealthRecord;
+  trendData: { date: string; count: number }[];
+}
+
 // Database service class
 class DatabaseService {
   private db: IDBPDatabase | null = null;
@@ -541,13 +549,7 @@ class DatabaseService {
   }
 
   // Analytics and stats
-  async getHealthStats(userId: string): Promise<{
-    totalRecords: number;
-    recordsByType: Record<string, number>;
-    alertsCount: number;
-    lastRecord?: HealthRecord;
-    trendData: { date: string; count: number }[];
-  }> {
+  async getHealthStats(userId: string): Promise<HealthStats> {
     const db = await this.ensureReady();
     db.transaction([STORES.HEALTH_RECORDS, STORES.INSIGHTS], 'readonly');
     

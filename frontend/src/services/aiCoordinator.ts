@@ -277,7 +277,7 @@ export class ContextAwareAICoordinator {
         validation: {
           isValid: true,
           warnings: ['Procesamiento limitado debido a error'],
-          errors: [error.message]
+          errors: [error instanceof Error ? error.message : 'Error desconocido']
         }
       };
     }

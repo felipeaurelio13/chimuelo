@@ -119,6 +119,19 @@ interface DataContextType {
   refreshAllData: () => Promise<void>;
   exportData: () => Promise<Blob>;
   clearAllData: () => Promise<void>;
+  
+  // Database methods
+  getHealthRecords: (userId: string, filters?: {
+    type?: string;
+    startDate?: Date;
+    endDate?: Date;
+    requiresAttention?: boolean;
+    tags?: string[];
+    limit?: number;
+    offset?: number;
+  }) => Promise<HealthRecord[]>;
+  
+  getHealthStats: (userId: string) => Promise<HealthStats>;
 }
 
 // Initial state
@@ -595,7 +608,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     isDataStale,
     refreshAllData,
     exportData,
-    clearAllData
+    clearAllData,
+    getHealthRecords: databaseService.getHealthRecords,
+    getHealthStats: databaseService.getHealthStats
   };
 
   return (

@@ -2,11 +2,17 @@ import React, { createContext, useContext, useState, useEffect, type ReactNode, 
 import { authService } from '../services/authService';
 
 // Types
-interface User {
+export interface User {
   id: string;
   email: string;
   name: string;
-  createdAt: string;
+  avatar?: string;
+  babyName?: string;
+  birthDate?: string;
+  birthWeight?: number;
+  birthHeight?: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 interface AuthState {
@@ -57,7 +63,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.log('AuthContext: User found in session:', user.email);
         }
         setState({
-          user,
+          user: {
+            ...user,
+            createdAt: new Date(user.createdAt),
+            updatedAt: new Date()
+          },
           isLoading: false,
           error: null,
           isAuthenticated: true,
@@ -91,7 +101,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.log('AuthContext: Login successful');
         }
         setState({
-          user: result.user as User,
+          user: {
+            ...result.user,
+            createdAt: new Date(result.user.createdAt),
+            updatedAt: new Date()
+          } as User,
           isLoading: false,
           error: null,
           isAuthenticated: true,
@@ -143,7 +157,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.log('AuthContext: Registration successful');
         }
         setState({
-          user: result.user as User,
+          user: {
+            ...result.user,
+            createdAt: new Date(result.user.createdAt),
+            updatedAt: new Date()
+          } as User,
           isLoading: false,
           error: null,
           isAuthenticated: true,

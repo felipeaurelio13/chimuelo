@@ -56,13 +56,29 @@ const DocumentAnalysisModal: React.FC<DocumentAnalysisModalProps> = ({
 
   // Process selected file
   const handleFile = (file: File) => {
-    // Validate file
     const validation = visionAnalysisService.validateImageFile(file);
-    if (!validation.valid) {
-      setError(validation.error || 'Archivo no válido');
-      return;
+    
+    // Handle both synchronous and asynchronous validation
+    if (validation instanceof Promise) {
+      validation.then(result => {
+        if (!result.valid) {
+          setError(result.error || 'Archivo no válido');
+          return;
+        }
+        handleFileUpload(file);
+      }).catch(() => {
+        setError('Error validando archivo');
+      });
+    } else {
+      if (!validation.valid) {
+        setError(validation.error || 'Archivo no válido');
+        return;
+      }
+      handleFileUpload(file);
     }
+  };
 
+  const handleFileUpload = (file: File) => {
     setSelectedFile(file);
     
     // Auto-suggest document type based on filename

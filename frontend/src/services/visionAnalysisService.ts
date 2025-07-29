@@ -247,18 +247,23 @@ FORMATO DE RESPUESTA REQUERIDO:
         data: {
           documentType: request.documentType,
           patientInfo: {
-            name: null,
-            dateOfBirth: null,
-            age: null
+            name: undefined,
+            dateOfBirth: undefined,
+            age: undefined
           },
           extractedData: {
             date: new Date().toISOString().split('T')[0],
-            provider: null,
+            provider: undefined,
             mainFindings: ['Documento PDF detectado'],
             medications: [],
-            measurements: {},
+            measurements: {
+              weight: undefined,
+              height: undefined,
+              temperature: undefined,
+              other: {}
+            },
             recommendations: ['Revisar documento PDF completo'],
-            nextAppointment: null,
+            nextAppointment: undefined,
             urgentFlags: []
           },
           analysisNotes: {
@@ -406,7 +411,7 @@ FORMATO DE RESPUESTA REQUERIDO:
   /**
    * Validate image file before processing
    */
-  public validateImageFile(file: File): { valid: boolean; error?: string } {
+  public validateImageFile(file: File): { valid: boolean; error?: string } | Promise<{ valid: boolean; error?: string }> {
     // Check file size (max 10MB)
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
@@ -434,7 +439,7 @@ FORMATO DE RESPUESTA REQUERIDO:
 
     // Check if it's an image (for non-PDF files)
     if (file.type !== 'application/pdf') {
-      return new Promise((resolve) => {
+      return new Promise<{ valid: boolean; error?: string }>((resolve) => {
         const img = new Image();
         img.onload = () => {
           // Check minimum dimensions
