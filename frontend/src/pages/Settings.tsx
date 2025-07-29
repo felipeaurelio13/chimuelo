@@ -608,7 +608,7 @@ const Settings: React.FC = () => {
                 <div className="app-info">
                   <div className="app-icon">👶</div>
                   <h3>Chimuelo Health Tracker</h3>
-                  <p className="version">Versión 2.3.0</p>
+                  <p className="version">Versión 2.4.0</p>
                 </div>
 
                 <div className="about-description">

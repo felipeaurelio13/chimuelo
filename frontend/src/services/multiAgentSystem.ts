@@ -1015,43 +1015,137 @@ export class MultiAgentCoordinator {
         contextKeys: Object.keys(input.context || {})
       });
       
-      // 1. Clasificar input
+      // 1. Clasificar input con manejo robusto de errores
       console.log('🔧 [DEBUG] Paso 1: Clasificando input...');
-      const classifier = ClassifierAgent.getInstance();
-      const classification = await classifier.classifyInput(input);
-      console.log('🔧 [DEBUG] Clasificación completada:', classification.routingRecommendation);
+      let classification;
+      try {
+        const classifier = ClassifierAgent.getInstance();
+        classification = await classifier.classifyInput(input);
+        console.log('🔧 [DEBUG] Clasificación completada:', classification.routingRecommendation);
+      } catch (classifierError) {
+        console.error('❌ Error en clasificación:', classifierError);
+        // Fallback classification
+        classification = {
+          inputType: input.type,
+          contentType: 'general',
+          confidence: 0.5,
+          routingRecommendation: 'medical_agent'
+        };
+      }
       
-      // 2. Extraer contenido
+      // 2. Extraer contenido con manejo robusto de errores
       console.log('🔧 [DEBUG] Paso 2: Extrayendo contenido...');
       let extractedContent;
-      if (input.type === 'image' || input.type === 'pdf') {
-        console.log('🔧 [DEBUG] Usando VisionAgent...');
-        extractedContent = await VisionAgent.getInstance().analyzeContent(input);
-      } else {
-        console.log('🔧 [DEBUG] Usando TextAgent...');
-        extractedContent = await TextAgent.getInstance().analyzeContent(input);
+      try {
+        if (input.type === 'image' || input.type === 'pdf') {
+          console.log('🔧 [DEBUG] Usando VisionAgent...');
+          extractedContent = await VisionAgent.getInstance().analyzeContent(input);
+        } else {
+          console.log('🔧 [DEBUG] Usando TextAgent...');
+          extractedContent = await TextAgent.getInstance().analyzeContent(input);
+        }
+        console.log('🔧 [DEBUG] Contenido extraído:', !!extractedContent);
+      } catch (extractionError) {
+        console.error('❌ Error en extracción de contenido:', extractionError);
+        // Fallback content
+        extractedContent = {
+          documentType: input.context?.documentType || 'general',
+          patientInfo: { name: 'Error en extracción', age: null, dateOfBirth: null },
+          extractedData: {
+            date: new Date().toISOString().split('T')[0],
+            provider: 'Error en extracción',
+            mainFindings: ['Error en procesamiento de contenido'],
+            medications: [],
+            measurements: { weight: null, height: null, temperature: null, other: {} },
+            recommendations: ['Revisar manualmente'],
+            urgentFlags: ['Error en procesamiento']
+          },
+          analysisNotes: {
+            confidence: 'bajo',
+            allergyWarnings: [],
+            ageAppropriate: 'Error en procesamiento',
+            requiresPhysicianReview: true
+          }
+        };
       }
-      console.log('🔧 [DEBUG] Contenido extraído:', !!extractedContent);
       
-      // 3. Rutear a agente especializado
+      // 3. Rutear a agente especializado con manejo robusto de errores
       console.log('🔧 [DEBUG] Paso 3: Ruteando a agente especializado...');
-      const router = IntelligentRouter.getInstance();
-      const agentOutput = await router.routeToAgent(classification, extractedContent);
-      console.log('🔧 [DEBUG] Agente procesado:', agentOutput.agentId);
+      let agentOutput;
+      try {
+        const router = IntelligentRouter.getInstance();
+        agentOutput = await router.routeToAgent(classification, extractedContent);
+        console.log('🔧 [DEBUG] Agente procesado:', agentOutput.agentId);
+      } catch (routingError) {
+        console.error('❌ Error en ruteo:', routingError);
+        // Fallback agent output
+        agentOutput = {
+          agentId: 'fallback_agent',
+          classification: classification.contentType || 'general',
+          extractedData: extractedContent,
+          confidence: 0.3,
+          recommendations: [
+            'Error en procesamiento automático',
+            'Se requiere revisión manual',
+            'Verificar archivo'
+          ],
+          shouldUpdateFicha: false,
+          timestamp: new Date()
+        };
+      }
       
-      // 4. Actualizar ficha si es necesario
+      // 4. Actualizar ficha si es necesario (no crítico)
       console.log('🔧 [DEBUG] Paso 4: Actualizando ficha...');
-      const fichaAgent = FichaMAxiAgent.getInstance();
-      await fichaAgent.updateFicha(agentOutput);
-      console.log('🔧 [DEBUG] Ficha actualizada, shouldUpdateFicha:', agentOutput.shouldUpdateFicha);
+      try {
+        const fichaAgent = FichaMAxiAgent.getInstance();
+        await fichaAgent.updateFicha(agentOutput);
+        console.log('🔧 [DEBUG] Ficha actualizada, shouldUpdateFicha:', agentOutput.shouldUpdateFicha);
+      } catch (fichaError) {
+        console.error('❌ Error actualizando ficha (no crítico):', fichaError);
+        // No fallar por errores en la ficha
+      }
       
       console.log('🔧 [DEBUG] MultiAgentCoordinator completado exitosamente');
       return agentOutput;
       
     } catch (error) {
-      console.error('🔧 [DEBUG] Error in MultiAgentCoordinator:', error);
-             console.error('🔧 [DEBUG] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-      throw error;
+      console.error('🔧 [DEBUG] Error crítico in MultiAgentCoordinator:', error);
+      console.error('🔧 [DEBUG] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      
+      // Crear fallback robusto para prevenir crashes
+      const fallbackOutput: AgentOutput = {
+        agentId: 'error_fallback_agent',
+        classification: 'general',
+        extractedData: {
+          patientInfo: { name: 'Error en sistema', age: null, dateOfBirth: null },
+          date: new Date().toISOString().split('T')[0],
+          provider: 'Sistema de respaldo',
+          mainFindings: [
+            'Error crítico en el sistema multiagente',
+            `Error: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+            'Se requiere procesamiento manual'
+          ],
+          medications: [],
+          measurements: { weight: null, height: null, temperature: null, other: {} },
+          recommendations: [
+            'Revisar documento manualmente',
+            'Verificar que el archivo no esté corrupto',
+            'Contactar soporte si el problema persiste'
+          ],
+          urgentFlags: ['Error crítico en sistema']
+        },
+        confidence: 0.1,
+        recommendations: [
+          'Error crítico en el procesamiento automático',
+          'Se requiere intervención manual',
+          'Verificar integridad del archivo'
+        ],
+        shouldUpdateFicha: false,
+        timestamp: new Date()
+      };
+      
+      console.log('🔄 Retornando fallback debido a error crítico');
+      return fallbackOutput;
     }
   }
 }
