@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
 import { ThemeProvider, ThemeScript } from './contexts/ThemeContext';
 import LoadingScreen from './components/LoadingScreen';
+import ErrorBoundary from './components/ErrorBoundary';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -15,6 +16,7 @@ import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import './App.css';
 import './styles/themes.css';
+import './styles/ErrorBoundary.css';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -97,7 +99,9 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <DataProvider>
-            <AppContent />
+            <ErrorBoundary>
+              <AppContent />
+            </ErrorBoundary>
           </DataProvider>
         </AuthProvider>
       </ThemeProvider>

@@ -1,5 +1,6 @@
 // Servicio de integración con OpenAI
 // NOTA: La API key debe estar en las variables de entorno, nunca en el código
+import ErrorHandler, { handleErrorWithFallback, type ErrorInfo } from './errorHandler';
 
 interface OpenAIConfig {
   model: string;
@@ -81,7 +82,12 @@ class OpenAIService {
   // Extraer datos de salud usando el Worker
   async extractHealthData(input: string, inputType: 'text' | 'image' | 'audio' | 'video' | 'pdf' = 'text'): Promise<any> {
     if (this.isQuotaExceeded) {
-      throw new Error('Cuota de OpenAI excedida. Intenta de nuevo más tarde.');
+      const quotaError = ErrorHandler.createAIError(
+        new Error('Cuota de OpenAI excedida. Intenta de nuevo más tarde.'),
+        { input, inputType, quotaExceeded: true }
+      );
+      ErrorHandler.getInstance().logError(quotaError);
+      throw new Error(quotaError.userMessage);
     }
 
     await this.rateLimitCheck();
@@ -107,17 +113,34 @@ class OpenAIService {
       });
 
       if (!response.ok) {
+        let errorMessage = `Error en la API: ${response.status}`;
+        
         if (response.status === 429) {
           this.isQuotaExceeded = true;
-          throw new Error('Límite de rate excedido');
+          errorMessage = 'Límite de rate excedido';
+        } else if (response.status === 503) {
+          errorMessage = 'Servicio temporalmente no disponible';
+        } else if (response.status === 500) {
+          errorMessage = 'Error interno del servidor';
         }
-        throw new Error(`Error en la API: ${response.status}`);
+        
+        const networkError = ErrorHandler.createNetworkError(
+          new Error(errorMessage),
+          { responseStatus: response.status, input, inputType }
+        );
+        ErrorHandler.getInstance().logError(networkError);
+        throw new Error(networkError.userMessage);
       }
 
       const result = await response.json();
       
       if (!result.success) {
-        throw new Error(result.error || 'Error desconocido');
+        const apiError = ErrorHandler.createAIError(
+          new Error(result.error || 'Error desconocido'),
+          { result, input, inputType }
+        );
+        ErrorHandler.getInstance().logError(apiError);
+        throw new Error(apiError.userMessage);
       }
 
       return result.data;
@@ -126,11 +149,17 @@ class OpenAIService {
         console.error('Error en extractHealthData:', error);
       }
       
-      if (error.message.includes('quota')) {
-        this.isQuotaExceeded = true;
+      // Si el error ya fue procesado por nuestro sistema, solo relanzarlo
+      if (error.message.includes('Error de conexión') || 
+          error.message.includes('Límite de rate') ||
+          error.message.includes('Cuota de OpenAI')) {
+        throw error;
       }
       
-      throw error;
+      // Procesar error no manejado
+      const errorInfo = ErrorHandler.createAIError(error, { input, inputType });
+      ErrorHandler.getInstance().logError(errorInfo);
+      throw new Error(errorInfo.userMessage);
     }
   }
 

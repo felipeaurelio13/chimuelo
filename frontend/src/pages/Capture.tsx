@@ -8,6 +8,7 @@ import { contextAwareAICoordinator as contextAwareAI } from '../services/aiCoord
 import { type HealthRecord, type HealthStats } from '../services/databaseService';
 import { type ProcessingResult } from '../services/aiAgents';
 import AgentConversationViewer from '../components/AgentConversationViewer';
+import ErrorHandler, { type ErrorInfo } from '../services/errorHandler';
 import '../styles/Capture.css';
 
 interface CaptureData {
@@ -227,34 +228,66 @@ const Capture: React.FC = () => {
     // Procesar el resultado del nuevo sistema de IA
     let extractedData: ExtractedData;
     
-    // El resultado viene directamente del worker, ya procesado por openaiService
-    if (result && typeof result === 'object') {
-      extractedData = {
-        type: result.type || 'note',
-        confidence: result.confidence || 0.5,
-        timestamp: result.data?.date || new Date().toISOString(),
-        data: {
-          value: result.data?.value || captureData.input,
-          unit: result.data?.unit || 'text',
-          date: result.data?.date || new Date().toISOString(),
-          context: result.data?.context || captureData.input
-        },
-        notes: result.notes || generateNotes(result),
-        requiresAttention: result.requiresAttention || false
-      };
-    } else {
-      // Fallback para casos inesperados
+    try {
+      // El resultado viene directamente del worker, ya procesado por openaiService
+      if (result && typeof result === 'object') {
+        extractedData = {
+          type: result.type || 'note',
+          confidence: result.confidence || 0.5,
+          timestamp: result.data?.date || new Date().toISOString(),
+          data: {
+            value: result.data?.value || captureData.input,
+            unit: result.data?.unit || 'text',
+            date: result.data?.date || new Date().toISOString(),
+            context: result.data?.context || captureData.input
+          },
+          notes: result.notes || generateNotes(result),
+          requiresAttention: result.requiresAttention || false
+        };
+      } else {
+        // Fallback para casos inesperados
+        extractedData = {
+          type: 'note',
+          confidence: 0.3,
+          timestamp: new Date().toISOString(),
+          data: {
+            value: captureData.input,
+            unit: 'text',
+            date: new Date().toISOString(),
+            context: 'Análisis básico'
+          },
+          notes: 'No se pudo extraer información estructurada',
+          requiresAttention: false
+        };
+      }
+      
+      // Validar que los datos extraídos sean válidos
+      if (!extractedData.data?.value) {
+        throw new Error('No se pudo extraer valor de los datos');
+      }
+      
+    } catch (error) {
+      console.error('Error procesando resultado de IA:', error);
+      
+      // Crear error info para logging
+      const errorInfo = ErrorHandler.createUIError(error, { 
+        result, 
+        captureData 
+      });
+      ErrorHandler.getInstance().logError(errorInfo);
+      
+      // Crear fallback robusto
       extractedData = {
         type: 'note',
-        confidence: 0.3,
+        confidence: 0.1,
         timestamp: new Date().toISOString(),
         data: {
-          value: captureData.input,
+          value: captureData.input || 'Texto no disponible',
           unit: 'text',
           date: new Date().toISOString(),
-          context: 'Análisis básico'
+          context: 'Análisis básico por error'
         },
-        notes: 'No se pudo extraer información estructurada',
+        notes: errorInfo.userMessage,
         requiresAttention: false
       };
     }
@@ -508,11 +541,21 @@ const Capture: React.FC = () => {
         }
       }
       
-      setProcessError(
-        error instanceof Error 
-          ? `Error en el procesamiento: ${error.message}` 
-          : 'Error desconocido en el procesamiento'
-      );
+      // Crear error info para logging
+      const errorInfo = ErrorHandler.handleError(error, { 
+        input: captureData.input, 
+        userContext: { userId: user?.id } 
+      });
+      ErrorHandler.getInstance().logError(errorInfo);
+      
+      // Mostrar error amigable al usuario
+      setProcessError(errorInfo.userMessage);
+      
+      // Si hay un error crítico, mostrar información adicional
+      if (errorInfo.severity === 'critical') {
+        console.error('Error crítico detectado:', errorInfo);
+        // Aquí podrías mostrar un modal o notificación especial
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -739,7 +782,16 @@ const Capture: React.FC = () => {
           console.error('Capture: Error saving data:', error);
         }
       }
-      alert('Error al guardar los datos. Por favor intenta de nuevo.');
+      
+      // Crear error info para logging
+      const errorInfo = ErrorHandler.createDatabaseError(error, { 
+        extractedData, 
+        userId: user?.id 
+      });
+      ErrorHandler.getInstance().logError(errorInfo);
+      
+      // Mostrar error amigable al usuario
+      alert(errorInfo.userMessage);
     }
   }, [extractedData, user, captureData, navigate, createHealthRecord, createInsight, customDate]);
 

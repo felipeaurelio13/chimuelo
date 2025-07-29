@@ -3,6 +3,7 @@ import openaiService from './openaiService';
 import { AIProcessingCoordinatorV2 } from './aiAgents';
 import { MultiAgentCoordinator } from './multiAgentSystem';
 import { type HealthRecord } from './databaseService';
+import ErrorHandler, { handleErrorWithFallback, type ErrorInfo } from './errorHandler';
 
 interface UserProfile {
   babyName?: string;
@@ -257,6 +258,10 @@ export class ContextAwareAICoordinator {
       // Paso 5: Fallback en caso de error
       await this.simulateProcessingStep('Sistema de Respaldo', 'Aplicando análisis básico...', 200);
       
+      // Crear error info para logging
+      const errorInfo = ErrorHandler.createAIError(error, { input, userContext });
+      ErrorHandler.getInstance().logError(errorInfo);
+      
       return {
         type: 'note',
         data: {
@@ -267,12 +272,13 @@ export class ContextAwareAICoordinator {
         },
         confidence: 0.3,
         requiresAttention: false,
-        notes: 'Error en procesamiento. Se aplicó análisis básico.',
+        notes: errorInfo.userMessage,
         validation: {
           isValid: true,
           warnings: ['Procesamiento limitado debido a error'],
-          errors: [error instanceof Error ? error.message : 'Error desconocido']
-        }
+          errors: [errorInfo.message]
+        },
+        error: errorInfo
       };
     }
   }
@@ -286,7 +292,34 @@ export class ContextAwareAICoordinator {
       return this.mergeWithLocalProcessing(result, enrichedInput, userContext);
     } catch (error) {
       console.error('Error en OpenAI processing:', error);
-      throw error;
+      
+      // Crear error info específico para OpenAI
+      const errorInfo = ErrorHandler.createAIError(error, { 
+        enrichedInput, 
+        userContext,
+        source: 'openai'
+      });
+      ErrorHandler.getInstance().logError(errorInfo);
+      
+      // Retornar fallback con información del error
+      return {
+        type: 'note',
+        data: {
+          value: enrichedInput,
+          unit: 'text',
+          date: new Date().toISOString(),
+          context: 'Análisis básico por error de OpenAI'
+        },
+        confidence: 0.3,
+        requiresAttention: false,
+        notes: errorInfo.userMessage,
+        validation: {
+          isValid: true,
+          warnings: ['Procesamiento limitado debido a error de OpenAI'],
+          errors: [errorInfo.message]
+        },
+        error: errorInfo
+      };
     }
   }
 
