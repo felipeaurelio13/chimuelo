@@ -5,7 +5,7 @@ import { useData } from '../contexts/DataContext';
 import apiService from '../services/apiService';
 import SchemaService from '../services/schemas';
 import { contextAwareAICoordinator as contextAwareAI } from '../services/aiCoordinator';
-import { type HealthRecord } from '../services/databaseService';
+import { type HealthRecord, type HealthStats } from '../services/databaseService';
 import { type ProcessingResult } from '../services/aiAgents';
 import AgentConversationViewer from '../components/AgentConversationViewer';
 import '../styles/Capture.css';
@@ -60,7 +60,7 @@ const Capture: React.FC = () => {
     console.log('Capture component rendered.');
   }
   const { user } = useAuth();
-  const { createHealthRecord, createInsight } = useData();
+  const { createHealthRecord, createInsight, getHealthRecords, getHealthStats } = useData();
   const navigate = useNavigate();
   
   // State
@@ -224,45 +224,77 @@ const Capture: React.FC = () => {
       console.log('🔧 [DEBUG] Capture: Processing AI final result.', result);
     }
     
-    // Defensive programming: handle both old and new AI system formats
-    const finalData = result?.finalData || result?.extractedData || {};
+    // Procesar el resultado del nuevo sistema de IA
+    let extractedData: ExtractedData;
     
-    if (import.meta.env.VITE_DEV === 'TRUE') {
-      console.log('🔧 [DEBUG] Capture: finalData extracted:', finalData);
+    if (result.type && result.data) {
+      // Nuevo formato del sistema mejorado
+      extractedData = {
+        type: result.type,
+        confidence: result.confidence || 0.5,
+        timestamp: result.data.date || new Date().toISOString(),
+        data: {
+          value: result.data.value,
+          unit: result.data.unit,
+          date: result.data.date || new Date().toISOString(),
+          context: result.data.context || captureData.input
+        },
+        notes: result.notes || generateNotes(result),
+        requiresAttention: result.requiresAttention || false
+      };
+    } else if (result.extractedData) {
+      // Formato legacy para compatibilidad
+      const finalData = result.extractedData;
+      extractedData = {
+        type: finalData.primaryType || finalData.documentType || 'note',
+        confidence: result.confidence || 0.5,
+        timestamp: finalData.date || new Date().toISOString(),
+        data: {
+          ...finalData.weight && { value: finalData.weight.value, unit: finalData.weight.unit },
+          ...finalData.temperature && { value: finalData.temperature.value, unit: finalData.temperature.unit },
+          ...finalData.height && { value: finalData.height.value, unit: finalData.height.unit },
+          ...finalData.symptoms && { symptoms: finalData.symptoms },
+          ...finalData.medications && { medications: finalData.medications },
+          date: finalData.date || new Date().toISOString()
+        },
+        notes: generateNotes(result),
+        requiresAttention: (finalData.urgencyLevel && finalData.urgencyLevel > 2) || false
+      };
+    } else {
+      // Fallback para casos inesperados
+      extractedData = {
+        type: 'note',
+        confidence: 0.3,
+        timestamp: new Date().toISOString(),
+        data: {
+          value: captureData.input,
+          unit: 'text',
+          date: new Date().toISOString(),
+          context: 'Análisis básico'
+        },
+        notes: 'No se pudo extraer información estructurada',
+        requiresAttention: false
+      };
     }
-    
-    // Convertir a formato ExtractedData
-    const extractedData: ExtractedData = {
-      type: finalData.primaryType || finalData.documentType || 'note',
-      confidence: result.confidence || 0.5,
-      timestamp: finalData.date || new Date().toISOString(),
-      data: {
-        ...finalData.weight && { value: finalData.weight.value, unit: finalData.weight.unit },
-        ...finalData.temperature && { value: finalData.temperature.value, unit: finalData.temperature.unit },
-        ...finalData.height && { value: finalData.height.value, unit: finalData.height.unit },
-        ...finalData.symptoms && { symptoms: finalData.symptoms },
-        ...finalData.medications && { medications: finalData.medications },
-        date: finalData.date || new Date().toISOString()
-      },
-      notes: generateNotes(result),
-      requiresAttention: (finalData.urgencyLevel && finalData.urgencyLevel > 2) || false
-    };
     
     setExtractedData(extractedData);
     setShowPreview(true);
     setShowClarificationDialog(false);
     
-    // Establecer fecha personalizada
-    const extractedDate = new Date(finalData.date || new Date());
-    setCustomDate(extractedDate.toISOString().split('T')[0]);
+    // Establecer fecha personalizada si está disponible
+    if (extractedData.data.date) {
+      const extractedDate = new Date(extractedData.data.date);
+      setCustomDate(extractedDate.toISOString().split('T')[0]);
+    }
     
-    // Validar
+    // Validar el resultado
     const validationResult = validateExtractedData(extractedData);
     setValidation(validationResult);
+    
     if (import.meta.env.VITE_DEV === 'TRUE') {
       console.log('Capture: Extracted data set and validated.', extractedData, validationResult);
     }
-  }, [generateNotes, validateExtractedData]);
+  }, [generateNotes, validateExtractedData, captureData.input]);
 
   // Handle file upload
   const handleFileUpload = useCallback((file: File) => {
@@ -446,23 +478,35 @@ const Capture: React.FC = () => {
     setProcessError(null);
     setShowPreview(false);
     
-          try {
+    try {
+      if (import.meta.env.VITE_DEV === 'TRUE') {
+        console.log('Capture: Initiating multi-agent processing.');
+      }
+      
+      // Configurar callback para mostrar pasos de procesamiento
+      contextAwareAI.setStepUpdateCallback((step: any) => {
         if (import.meta.env.VITE_DEV === 'TRUE') {
-          console.log('Capture: Initiating multi-agent processing.');
+          console.log(`🤖 ${step.agent || 'AI'}: ${step.description || step.action || 'Processing'}`);
         }
-        
-        // Configurar callback para mostrar pasos de procesamiento
-        contextAwareAI.setStepUpdateCallback((step: any) => {
-          if (import.meta.env.VITE_DEV === 'TRUE') {
-            console.log(`🤖 ${step.agent || 'AI'}: ${step.description || step.action || 'Processing'}`);
-          }
-        });
-        
-        // Usar el coordinador de IA multi-agente con metadata
-        const result = await contextAwareAI.processWithContext(
-          captureData.input,
-          captureData.metadata as any
-        );
+      });
+      
+      // Obtener contexto del usuario para enriquecer el análisis
+      const userContext = {
+        profile: {
+          babyName: user?.babyName,
+          birthDate: user?.birthDate,
+          birthWeight: user?.birthWeight,
+          birthHeight: user?.birthHeight
+        },
+        recentRecords: await getRecentHealthRecords(7), // Últimos 7 días
+        currentStats: await getCurrentHealthStats()
+      };
+      
+      // Usar el coordinador de IA con contexto real
+      const result = await contextAwareAI.processWithContext(
+        captureData.input,
+        userContext
+      );
       
       if (import.meta.env.VITE_DEV === 'TRUE') {
         console.log('Capture: Multi-agent processing result:', result);
@@ -470,26 +514,8 @@ const Capture: React.FC = () => {
       
       setAiProcessingResult(result);
       
-      // Si necesita clarificación, mostrar diálogo
-      if (result.clarificationNeeded) {
-        setShowClarificationDialog(true);
-        if (import.meta.env.VITE_DEV === 'TRUE') {
-          console.log('Capture: Clarification needed, showing dialog.');
-        }
-        
-        // Inicializar respuestas vacías para las preguntas
-        const initialResponses: {[key: string]: string} = {};
-        result.questions.forEach((q: string) => {
-          initialResponses[q] = '';
-        });
-        setUserResponses(initialResponses);
-      } else {
-        // Procesar directamente si la confianza es alta
-        if (import.meta.env.VITE_DEV === 'TRUE') {
-          console.log('Capture: No clarification needed, processing AI result.');
-        }
-        await processAiResult(result);
-      }
+      // Procesar el resultado directamente (sin mock data)
+      await processAiResult(result);
       
     } catch (error: unknown) {
       if (import.meta.env.VITE_DEV === 'TRUE') {
@@ -499,14 +525,50 @@ const Capture: React.FC = () => {
           console.error('Capture: Error processing with AI:', error);
         }
       }
-      setProcessError(error instanceof Error ? error.message : 'Error al procesar');
+      
+      setProcessError(
+        error instanceof Error 
+          ? `Error en el procesamiento: ${error.message}` 
+          : 'Error desconocido en el procesamiento'
+      );
     } finally {
       setIsProcessing(false);
-      if (import.meta.env.VITE_DEV === 'TRUE') {
-        console.log('Capture: AI processing finished.');
-      }
     }
-  }, [captureData, processAiResult, isInputReadyForAI]);
+  }, [captureData.input, isInputReadyForAI, contextAwareAI, processAiResult, user]);
+
+  // Helper functions for getting user context
+  const getRecentHealthRecords = async (days: number): Promise<HealthRecord[]> => {
+    try {
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+      
+      return await getHealthRecords(user?.id || '', {
+        startDate,
+        endDate,
+        limit: 20
+      });
+    } catch (error) {
+      console.warn('Error getting recent health records:', error);
+      return [];
+    }
+  };
+
+  const getCurrentHealthStats = async (): Promise<HealthStats | null> => {
+    try {
+      const stats = await getHealthStats(user?.id || '');
+      return {
+        totalRecords: stats.totalRecords,
+        recordsByType: stats.recordsByType,
+        alertsCount: stats.alertsCount,
+        lastRecord: stats.lastRecord,
+        trendData: stats.trendData
+      };
+    } catch (error) {
+      console.warn('Error getting health stats:', error);
+      return null;
+    }
+  };
 
   // Update suggestions based on debounced input
   useEffect(() => {

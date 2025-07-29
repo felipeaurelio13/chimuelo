@@ -170,6 +170,116 @@ function generateFallbackResponse(userMessage: string): string {
   return medicalFallbackResponses.general;
 }
 
+// Función para extraer datos de salud usando OpenAI
+async function extractHealthData(input: string, inputType: string, schema?: any, options?: any): Promise<any> {
+  const systemPrompt = `Eres un especialista médico en análisis de datos de salud infantil. Tu tarea es extraer información médica precisa de textos, imágenes o documentos.
+
+INSTRUCCIONES:
+1. Analiza el contenido proporcionado
+2. Extrae datos médicos relevantes (peso, altura, temperatura, síntomas, medicamentos, etc.)
+3. Identifica el tipo de registro (peso, altura, síntoma, medicación, vacuna, hito, etc.)
+4. Valida que los datos sean coherentes y realistas
+5. Proporciona confianza en la extracción (0-1)
+6. Responde ÚNICAMENTE en formato JSON válido
+
+FORMATO DE RESPUESTA:
+{
+  "type": "weight|height|temperature|symptom|medication|vaccine|milestone|note",
+  "data": {
+    "value": "valor extraído",
+    "unit": "unidad de medida",
+    "date": "fecha si está disponible",
+    "context": "contexto adicional"
+  },
+  "confidence": 0.95,
+  "requiresAttention": false,
+  "notes": "notas adicionales",
+  "validation": {
+    "isValid": true,
+    "warnings": [],
+    "errors": []
+  }
+}
+
+IMPORTANTE: 
+- Sé preciso con las extracciones
+- Valida rangos normales para la edad
+- Marca datos que requieran atención médica
+- Considera el contexto pediátrico`;
+
+  const userPrompt = `Analiza el siguiente ${inputType} y extrae los datos de salud relevantes:
+
+${input}
+
+${schema ? `Esquema esperado: ${JSON.stringify(schema)}` : ''}`;
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: options?.model || 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: options?.temperature || 0.1,
+        max_tokens: options?.maxTokens || 1000,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    
+    if (!content) {
+      throw new Error('No response from OpenAI');
+    }
+
+    // Intentar parsear la respuesta JSON
+    try {
+      const parsed = JSON.parse(content);
+      return {
+        success: true,
+        data: parsed,
+        source: 'openai'
+      };
+    } catch (parseError) {
+      // Si no es JSON válido, intentar extraer información básica
+      return {
+        success: true,
+        data: {
+          type: 'note',
+          data: {
+            value: content,
+            unit: 'text',
+            date: new Date().toISOString(),
+            context: 'Análisis de texto'
+          },
+          confidence: 0.7,
+          requiresAttention: false,
+          notes: 'Respuesta no estructurada de OpenAI',
+          validation: {
+            isValid: true,
+            warnings: ['Respuesta no en formato JSON esperado'],
+            errors: []
+          }
+        },
+        source: 'openai-fallback'
+      };
+    }
+  } catch (error) {
+    console.error('Error en extractHealthData:', error);
+    throw error;
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     try {
@@ -187,13 +297,92 @@ export default {
           success: true,
           message: 'Chimuelo Worker is healthy',
           version: '1.0.0',
-          features: hasOpenAI ? ['health', 'openai', 'fallback'] : ['health', 'fallback'],
+          features: hasOpenAI ? ['health', 'openai', 'fallback', 'extract'] : ['health', 'fallback'],
           openai_configured: hasOpenAI,
           fallback_enabled: true,
           timestamp: new Date().toISOString()
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
+      }
+      
+      // Extract health data endpoint
+      if (url.pathname === '/api/openai/extract' && request.method === 'POST') {
+        try {
+          const body = await request.json() as any;
+          
+          if (!body?.input) {
+            return new Response(JSON.stringify({
+              success: false,
+              error: 'Input is required'
+            }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+
+          // Try OpenAI first if API key is available
+          if (env?.OPENAI_API_KEY) {
+            try {
+              const result = await extractHealthData(
+                body.input, 
+                body.inputType || 'text',
+                body.schema,
+                body.options
+              );
+              
+              return new Response(JSON.stringify({
+                success: true,
+                data: result.data,
+                source: result.source,
+                timestamp: new Date().toISOString()
+              }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            } catch (openaiError) {
+              console.log('OpenAI failed, using fallback:', openaiError);
+            }
+          }
+
+          // Fallback: análisis básico sin OpenAI
+          const fallbackAnalysis = {
+            type: 'note',
+            data: {
+              value: body.input,
+              unit: 'text',
+              date: new Date().toISOString(),
+              context: 'Análisis básico'
+            },
+            confidence: 0.5,
+            requiresAttention: false,
+            notes: 'Análisis realizado sin IA avanzada',
+            validation: {
+              isValid: true,
+              warnings: ['Análisis limitado sin OpenAI'],
+              errors: []
+            }
+          };
+          
+          return new Response(JSON.stringify({
+            success: true,
+            data: fallbackAnalysis,
+            source: 'fallback',
+            note: env?.OPENAI_API_KEY ? 
+              '⚠️ OpenAI no disponible temporalmente. Usando análisis básico.' :
+              'ℹ️ Usando análisis básico sin OpenAI.'
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        } catch (error) {
+          console.error('Error in extract endpoint:', error);
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Error processing extraction request'
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
       }
       
       // OpenAI Chat endpoint with fallback
@@ -316,7 +505,7 @@ export default {
         success: false,
         error: 'Endpoint not found',
         path: url.pathname,
-        available_endpoints: ['/health', '/api/openai/chat', '/api/openai-proxy']
+        available_endpoints: ['/health', '/api/openai/chat', '/api/openai-proxy', '/api/openai/extract']
       }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

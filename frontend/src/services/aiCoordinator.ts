@@ -1,6 +1,7 @@
 // Coordinador de IA con contexto real del usuario
 import openaiService from './openaiService';
 import { AIProcessingCoordinatorV2 } from './aiAgents';
+import { MultiAgentCoordinator } from './multiAgentSystem';
 import { type HealthRecord } from './databaseService';
 
 interface UserProfile {
@@ -45,6 +46,7 @@ interface ConversationState {
 
 export class ContextAwareAICoordinator {
   private coordinator: AIProcessingCoordinatorV2;
+  private multiAgentCoordinator: MultiAgentCoordinator;
   private profile: UserProfile | null = null;
   private recentRecords: HealthRecord[] = [];
   private currentStats: HealthStats | null = null;
@@ -54,6 +56,7 @@ export class ContextAwareAICoordinator {
 
   constructor() {
     this.coordinator = new AIProcessingCoordinatorV2();
+    this.multiAgentCoordinator = MultiAgentCoordinator.getInstance();
     this.conversationState = {
       answeredQuestions: new Set(),
       knownData: new Map(),
@@ -101,96 +104,69 @@ export class ContextAwareAICoordinator {
     }
   }
 
-  // Enriquecer input con contexto del perfil
+  // Enriquecer input con contexto del perfil del usuario
   enrichInputWithProfile(input: string, userContext: ContextualInput): string {
     this.profile = userContext.profile || null;
     this.recentRecords = userContext.recentRecords || [];
     this.currentStats = userContext.currentStats || null;
-
+    
     let contextualInput = input;
     
-    // Agregar contexto del bebé
+    // Agregar información del bebé si está disponible
     if (this.profile?.babyName) {
       contextualInput += `\n[CONTEXTO DEL BEBÉ: ${this.profile.babyName}`;
       
       if (this.profile.birthDate) {
         const age = this.calculateAge(this.profile.birthDate);
-        contextualInput += `, ${age.months} meses de edad`;
-        
-        // Guardar datos conocidos
-        this.conversationState.knownData.set('age_months', age.months);
-        this.conversationState.knownData.set('birth_date', this.profile.birthDate);
+        contextualInput += `, edad: ${age.months} meses (${age.days} días)`;
       }
       
       if (this.profile.birthWeight) {
         contextualInput += `, peso al nacer: ${this.profile.birthWeight}kg`;
-        this.conversationState.knownData.set('birth_weight', this.profile.birthWeight);
       }
       
       if (this.profile.birthHeight) {
         contextualInput += `, altura al nacer: ${this.profile.birthHeight}cm`;
-        this.conversationState.knownData.set('birth_height', this.profile.birthHeight);
       }
       
       contextualInput += `]`;
     }
-
-    // Agregar historial médico reciente
+    
+    // Agregar historial reciente relevante
     if (this.recentRecords.length > 0) {
-      contextualInput += `\n[HISTORIAL RECIENTE:`;
-      
-      // Últimos pesos
-      const recentWeights = this.recentRecords
+      const recentWeightRecords = this.recentRecords
         .filter(r => r.type === 'weight')
         .slice(-3)
-        .map(r => `${r.data.weight}kg (${new Date(r.timestamp).toLocaleDateString()})`);
+        .map(r => `${r.data.value}kg (${new Date(r.timestamp).toLocaleDateString()})`);
       
-      if (recentWeights.length > 0) {
-        contextualInput += `\nPesos: ${recentWeights.join(', ')}`;
-        this.conversationState.knownData.set('recent_weights', recentWeights);
+      if (recentWeightRecords.length > 0) {
+        contextualInput += `\n[PESOS RECIENTES: ${recentWeightRecords.join(', ')}]`;
       }
-
-      // Últimas alturas
-      const recentHeights = this.recentRecords
+      
+      const recentHeightRecords = this.recentRecords
         .filter(r => r.type === 'height')
         .slice(-3)
-        .map(r => `${r.data.height}cm (${new Date(r.timestamp).toLocaleDateString()})`);
+        .map(r => `${r.data.value}cm (${new Date(r.timestamp).toLocaleDateString()})`);
       
-      if (recentHeights.length > 0) {
-        contextualInput += `\nAlturas: ${recentHeights.join(', ')}`;
-        this.conversationState.knownData.set('recent_heights', recentHeights);
+      if (recentHeightRecords.length > 0) {
+        contextualInput += `\n[ALTURAS RECIENTES: ${recentHeightRecords.join(', ')}]`;
       }
-
-      // Síntomas recientes
+      
       const recentSymptoms = this.recentRecords
         .filter(r => r.type === 'symptom')
-        .slice(-5);
+        .slice(-2)
+        .map(r => r.data.description);
       
       if (recentSymptoms.length > 0) {
-        const symptomList = recentSymptoms.map(r => 
-          `${r.data.symptoms?.map((s: any) => s.name).join(', ')} (${new Date(r.timestamp).toLocaleDateString()})`
-        );
-        contextualInput += `\nSíntomas: ${symptomList.join('; ')}`;
-        this.conversationState.knownData.set('recent_symptoms', symptomList);
+        contextualInput += `\n[SÍNTOMAS RECIENTES: ${recentSymptoms.join(', ')}]`;
       }
-
-      contextualInput += `]`;
     }
-
-    // Agregar estadísticas generales
+    
+    // Agregar estadísticas actuales
     if (this.currentStats) {
-      contextualInput += `\n[ESTADÍSTICAS: ${this.currentStats.totalRecords} registros totales`;
-      
-      if (this.currentStats.lastRecord) {
-        const daysSinceLastRecord = Math.floor(
-          (Date.now() - new Date(this.currentStats.lastRecord.timestamp).getTime()) / (1000 * 60 * 60 * 24)
-        );
-        contextualInput += `, último registro hace ${daysSinceLastRecord} día${daysSinceLastRecord !== 1 ? 's' : ''}`;
-      }
-      
-      contextualInput += `]`;
+      contextualInput += `\n[ESTADÍSTICAS: ${this.currentStats.totalRecords} registros totales, ${this.currentStats.alertsCount} alertas activas]`;
     }
-
+    
     return contextualInput;
   }
 
@@ -198,222 +174,250 @@ export class ContextAwareAICoordinator {
   private calculateAge(birthDate: string): { months: number; days: number } {
     const birth = new Date(birthDate);
     const now = new Date();
-    
     const diffTime = Math.abs(now.getTime() - birth.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const months = Math.floor(diffDays / 30);
-    const days = diffDays % 30;
+    const months = Math.floor(diffDays / 30.44);
     
-    return { months, days };
+    return { months, days: diffDays };
   }
 
-  // Filtrar preguntas innecesarias basadas en el contexto conocido
+  // Filtrar preguntas innecesarias basadas en datos conocidos
   filterUnnecessaryQuestions(questions: string[]): string[] {
     return questions.filter(question => {
-      const questionLower = question.toLowerCase();
+      const lowerQuestion = question.toLowerCase();
       
-      // Si sabemos la fecha de nacimiento, no preguntar por edad
-      if (this.conversationState.knownData.has('birth_date') && 
-          (questionLower.includes('edad') || 
-           questionLower.includes('meses') || 
-           questionLower.includes('año') ||
-           questionLower.includes('cuándo nació'))) {
-        this.conversationState.answeredQuestions.add('age');
+      // Si tenemos fecha de nacimiento, no preguntar por edad
+      if (this.profile?.birthDate && 
+          (lowerQuestion.includes('edad') || lowerQuestion.includes('meses') || lowerQuestion.includes('año'))) {
         return false;
       }
       
-      // Si sabemos el nombre, no preguntar por nombre
-      if (this.profile?.babyName && 
-          (questionLower.includes('nombre') ||
-           questionLower.includes('se llama'))) {
-        this.conversationState.answeredQuestions.add('name');
+      // Si tenemos nombre, no preguntar por nombre
+      if (this.profile?.babyName && lowerQuestion.includes('nombre')) {
         return false;
       }
-
-      // Si tenemos pesos recientes, no preguntar por peso actual
-      if (this.conversationState.knownData.has('recent_weights') &&
-          questionLower.includes('peso') &&
-          questionLower.includes('actual')) {
+      
+      // Si tenemos peso reciente, no preguntar por peso
+      const hasRecentWeight = this.recentRecords.some(r => 
+        r.type === 'weight' && 
+        (new Date().getTime() - new Date(r.timestamp).getTime()) < 7 * 24 * 60 * 60 * 1000
+      );
+      if (hasRecentWeight && lowerQuestion.includes('peso')) {
         return false;
       }
-
-      // Si tenemos alturas recientes, no preguntar por altura actual
-      if (this.conversationState.knownData.has('recent_heights') &&
-          questionLower.includes('altura') &&
-          questionLower.includes('actual')) {
+      
+      // Si tenemos altura reciente, no preguntar por altura
+      const hasRecentHeight = this.recentRecords.some(r => 
+        r.type === 'height' && 
+        (new Date().getTime() - new Date(r.timestamp).getTime()) < 30 * 24 * 60 * 60 * 1000
+      );
+      if (hasRecentHeight && lowerQuestion.includes('altura')) {
         return false;
       }
-
+      
       return true;
     });
   }
 
-  // Determinar si el input requiere procesamiento de OpenAI o local
+  // Determinar si usar OpenAI basado en el input
   private shouldUseOpenAI(input: string): boolean {
-    const complexIndicators = [
-      'síntoma', 'síntomas', 'dolor', 'fiebre', 'temperatura',
-      'medicamento', 'medicina', 'vacuna', 'consulta', 'médico',
-      'desarrollo', 'hito', 'milestone', '¿', '?'
+    const complexKeywords = [
+      'síntoma', 'fiebre', 'temperatura', 'medicamento', 'vacuna',
+      'desarrollo', 'hito', 'milestone', 'alergia', 'erupción'
     ];
-
-    return complexIndicators.some(indicator => 
-      input.toLowerCase().includes(indicator)
+    
+    return complexKeywords.some(keyword => 
+      input.toLowerCase().includes(keyword)
     );
   }
 
-  // Procesar input con contexto awareness completo
+  // Procesar input con contexto real
   async processWithContext(input: string, userContext: ContextualInput = {}): Promise<any> {
     this.resetProcessingSteps();
     
-    // Paso 1: Análisis inicial
-    await this.simulateProcessingStep('Analizador Principal', 'Iniciando análisis contextual...', 300);
-    
-    // Enriquecer el input con contexto del perfil
-    const enrichedInput = this.enrichInputWithProfile(input, userContext);
-    
-    // Paso 2: Análisis de contexto
-    await this.simulateProcessingStep('Analizador de Contexto', 'Procesando información del bebé...', 400);
-
-    // Verificar si OpenAI está disponible y si es necesario
-    const useOpenAI = this.shouldUseOpenAI(input) && await openaiService.isAvailable();
-    
-    if (useOpenAI) {
-      await this.simulateProcessingStep('OpenAI', 'Conectando con IA avanzada...', 500);
-      
-      try {
-        const openAIResult = await this.processWithOpenAI(enrichedInput, userContext);
-        if (openAIResult.success) {
-          await this.simulateProcessingStep('OpenAI', 'Análisis completado con IA avanzada', 200);
-          return this.mergeWithLocalProcessing(openAIResult.data, enrichedInput, userContext);
-        }
-      } catch (error) {
-        console.warn('OpenAI processing failed, falling back to local processing:', error);
-        await this.simulateProcessingStep('OpenAI', 'Error en IA externa, usando procesamiento local', 200);
-      }
-    }
-    
-    // Procesar con agentes locales
-    await this.simulateProcessingStep('Agentes Locales', 'Procesando con IA local...', 600);
-    const result = await this.coordinator.processInput(enrichedInput, userContext);
-    
-    // Paso 3: Filtrar preguntas innecesarias
-    if (result.clarificationNeeded && result.questions) {
-      await this.simulateProcessingStep('Filtro de Contexto', 'Eliminando preguntas redundantes...', 300);
-      result.questions = this.filterUnnecessaryQuestions(result.questions);
-      result.clarificationNeeded = result.questions.length > 0;
-    }
-
-    // Paso 4: Validación final
-    await this.simulateProcessingStep('Validador', 'Validando resultados con contexto...', 250);
-    
-    // Guardar en historial de conversación
-    this.conversationState.conversationHistory.push({
-      timestamp: new Date(),
-      topic: result.finalData?.type || 'general',
-      data: result
-    });
-
-    return result;
-  }
-
-  // Procesar con OpenAI usando contexto
-  private async processWithOpenAI(enrichedInput: string, userContext: ContextualInput): Promise<any> {
     try {
-      const systemPrompt = `Eres un asistente médico pediátrico especializado. 
-      Analiza la información proporcionada considerando el contexto completo del bebé.
+      // Paso 1: Análisis inicial
+      await this.simulateProcessingStep('Analizador Principal', 'Iniciando análisis del texto...', 300);
       
-      IMPORTANTE:
-      - NO preguntes por información que ya está en el contexto
-      - Sé específico y útil en tus respuestas
-      - Si detectas algo preocupante, recomienda consultar al pediatra
-      - Usa el contexto para dar respuestas más precisas`;
-
-      const messages = [
-        {
-          role: 'system' as const,
-          content: systemPrompt
-        },
-        {
-          role: 'user' as const,
-          content: enrichedInput
-        }
-      ];
-
-      const response = await openaiService.chatCompletion(messages, userContext);
-
-      try {
-        return {
-          success: true,
-          data: JSON.parse(response || '{}')
-        };
-      } catch {
-        // Si no es JSON válido, tratar como respuesta de texto
-        return {
-          success: true,
-          data: {
-            extractedData: {
-              type: 'consultation',
-              data: { response: response },
-              confidence: 0.9,
-              timestamp: new Date().toISOString()
-            },
-            clarificationNeeded: false,
-            questions: [],
-            requiresAttention: false
-          }
-        };
+      // Enriquecer input con contexto
+      const enrichedInput = this.enrichInputWithProfile(input, userContext);
+      
+      // Paso 2: Clasificación de contenido
+      await this.simulateProcessingStep('Clasificador', 'Identificando tipo de datos...', 200);
+      
+      // Determinar si usar OpenAI o procesamiento local
+      const shouldUseOpenAI = this.shouldUseOpenAI(input);
+      
+      if (shouldUseOpenAI) {
+        // Paso 3: Procesamiento con OpenAI
+        await this.simulateProcessingStep('IA Avanzada', 'Procesando con inteligencia artificial...', 800);
+        return await this.processWithOpenAI(enrichedInput, userContext);
+      } else {
+        // Paso 4: Procesamiento local con multi-agentes
+        await this.simulateProcessingStep('Sistema Multi-Agente', 'Procesando con agentes especializados...', 600);
+        return await this.processWithMultiAgents(enrichedInput, userContext);
       }
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' };
-    }
-  }
-
-  // Combinar resultados de OpenAI con procesamiento local
-  private mergeWithLocalProcessing(openAIData: any, enrichedInput: string, userContext: ContextualInput): any {
-    // Si OpenAI devolvió una respuesta estructurada, úsala
-    if (openAIData.extractedData) {
+      console.error('Error en processWithContext:', error);
+      
+      // Paso 5: Fallback en caso de error
+      await this.simulateProcessingStep('Sistema de Respaldo', 'Aplicando análisis básico...', 200);
+      
       return {
-        ...openAIData,
-        source: 'openai',
-        context: {
-          profile: this.profile,
-          knownData: Object.fromEntries(this.conversationState.knownData),
-          processingSteps: this.processingSteps
+        type: 'note',
+        data: {
+          value: input,
+          unit: 'text',
+          date: new Date().toISOString(),
+          context: 'Análisis básico por error'
+        },
+        confidence: 0.3,
+        requiresAttention: false,
+        notes: 'Error en procesamiento. Se aplicó análisis básico.',
+        validation: {
+          isValid: true,
+          warnings: ['Procesamiento limitado debido a error'],
+          errors: [error.message]
         }
       };
     }
+  }
 
-    // Si no, combinar con procesamiento local
+  // Procesar con OpenAI
+  private async processWithOpenAI(enrichedInput: string, userContext: ContextualInput): Promise<any> {
+    try {
+      const result = await openaiService.extractHealthData(enrichedInput, 'text');
+      
+      // Mezclar con procesamiento local para validación
+      return this.mergeWithLocalProcessing(result, enrichedInput, userContext);
+    } catch (error) {
+      console.error('Error en OpenAI processing:', error);
+      throw error;
+    }
+  }
+
+  // Procesar con sistema multi-agente
+  private async processWithMultiAgents(enrichedInput: string, userContext: ContextualInput): Promise<any> {
+    try {
+      const agentInput = {
+        id: `input_${Date.now()}`,
+        type: 'text' as const,
+        content: enrichedInput,
+        timestamp: new Date(),
+        userId: 'current_user',
+        context: userContext
+      };
+
+      const result = await this.multiAgentCoordinator.processInput(agentInput);
+      
+      return {
+        type: result.classification,
+        data: {
+          value: result.extractedData,
+          unit: this.determineUnit(result.classification),
+          date: new Date().toISOString(),
+          context: enrichedInput
+        },
+        confidence: result.confidence,
+        requiresAttention: result.extractedData.requiresAttention || false,
+        notes: result.recommendations.join('; '),
+        validation: {
+          isValid: result.confidence > 0.5,
+          warnings: result.confidence < 0.8 ? ['Confianza baja en extracción'] : [],
+          errors: []
+        }
+      };
+    } catch (error) {
+      console.error('Error en multi-agent processing:', error);
+      throw error;
+    }
+  }
+
+  // Determinar unidad de medida basada en tipo
+  private determineUnit(type: string): string {
+    const unitMap: Record<string, string> = {
+      weight: 'kg',
+      height: 'cm',
+      temperature: '°C',
+      medication: 'dosis',
+      vaccine: 'dosis',
+      milestone: 'texto',
+      symptom: 'texto',
+      note: 'texto'
+    };
+    
+    return unitMap[type] || 'texto';
+  }
+
+  // Mezclar procesamiento de OpenAI con validación local
+  private mergeWithLocalProcessing(openAIData: any, enrichedInput: string, userContext: ContextualInput): any {
+    // Validar datos extraídos por OpenAI
+    const validation = this.validateExtractedData(openAIData);
+    
     return {
-      extractedData: {
-        type: 'consultation',
-        data: openAIData,
-        confidence: 0.85,
-        timestamp: new Date().toISOString()
-      },
-      clarificationNeeded: false,
-      questions: [],
-      requiresAttention: false,
-      source: 'hybrid',
-      context: {
-        profile: this.profile,
-        knownData: Object.fromEntries(this.conversationState.knownData),
-        processingSteps: this.processingSteps
-      }
+      ...openAIData,
+      validation,
+      context: enrichedInput,
+      source: 'openai_with_local_validation'
     };
   }
 
-  // Obtener contexto actual para debugging
+  // Validar datos extraídos
+  private validateExtractedData(data: any): { isValid: boolean; warnings: string[]; errors: string[] } {
+    const warnings: string[] = [];
+    const errors: string[] = [];
+    
+    // Validar tipo
+    if (!data.type || !['weight', 'height', 'temperature', 'symptom', 'medication', 'vaccine', 'milestone', 'note'].includes(data.type)) {
+      errors.push('Tipo de dato inválido');
+    }
+    
+    // Validar valor
+    if (!data.data?.value) {
+      errors.push('Valor no encontrado');
+    }
+    
+    // Validar rangos según tipo
+    if (data.type === 'weight' && data.data?.value) {
+      const weight = parseFloat(data.data.value);
+      if (weight < 0.5 || weight > 50) {
+        warnings.push('Peso fuera del rango normal para bebés');
+      }
+    }
+    
+    if (data.type === 'height' && data.data?.value) {
+      const height = parseFloat(data.data.value);
+      if (height < 30 || height > 150) {
+        warnings.push('Altura fuera del rango normal para bebés');
+      }
+    }
+    
+    if (data.type === 'temperature' && data.data?.value) {
+      const temp = parseFloat(data.data.value);
+      if (temp < 35 || temp > 42) {
+        warnings.push('Temperatura fuera del rango normal');
+      }
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      warnings,
+      errors
+    };
+  }
+
+  // Obtener contexto de debug
   getDebugContext(): any {
     return {
       profile: this.profile,
-      recentRecordsCount: this.recentRecords.length,
+      recentRecords: this.recentRecords.length,
+      currentStats: this.currentStats,
+      processingSteps: this.processingSteps,
       conversationState: {
         answeredQuestions: Array.from(this.conversationState.answeredQuestions),
         knownData: Object.fromEntries(this.conversationState.knownData),
-        conversationHistory: this.conversationState.conversationHistory.slice(-5) // Últimas 5
-      },
-      processingSteps: this.processingSteps
+        conversationHistory: this.conversationState.conversationHistory.length
+      }
     };
   }
 
@@ -424,11 +428,8 @@ export class ContextAwareAICoordinator {
       knownData: new Map(),
       conversationHistory: []
     };
-    this.processingSteps = [];
   }
 }
 
-// Instancia singleton para usar en toda la app
+// Singleton instance
 export const contextAwareAICoordinator = new ContextAwareAICoordinator();
-
-export default ContextAwareAICoordinator;
