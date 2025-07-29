@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { TimelineErrorBoundary } from '../components/TimelineErrorBoundary';
 import { TimelineSkeleton } from '../components/TimelineSkeleton';
 import { type HealthRecord } from '../services/databaseService';
+import AppFooter from '../components/AppFooter';
 import '../styles/Timeline.css';
 
 interface TimelineFilters {
@@ -634,6 +635,7 @@ const TimelineContent: React.FC = () => {
           </div>
         )}
       </main>
+      <AppFooter />
     </div>
   );
 };

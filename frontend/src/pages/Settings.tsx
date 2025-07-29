@@ -3,6 +3,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
+import AppFooter from '../components/AppFooter';
+import packageJson from '../../package.json';
 import '../styles/Settings.css';
 
 interface UserProfile {
@@ -608,7 +610,7 @@ const Settings: React.FC = () => {
                 <div className="app-info">
                   <div className="app-icon">👶</div>
                   <h3>Chimuelo Health Tracker</h3>
-                  <p className="version">Versión 2.5.0</p>
+                  <p className="version">Versión {packageJson.version}</p>
                 </div>
 
                 <div className="about-description">
@@ -656,6 +658,7 @@ const Settings: React.FC = () => {
 
         </main>
       </div>
+      <AppFooter />
     </div>
   );
 };

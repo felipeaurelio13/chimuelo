@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import databaseService from '../services/databaseService';
+import AppFooter from '../components/AppFooter';
+import packageJson from '../../package.json';
 import '../styles/Profile.css';
 
 interface UserSettings {
@@ -422,7 +424,7 @@ const Profile: React.FC = () => {
               <strong>Maxi</strong> es tu asistente personal de salud infantil impulsado por IA.
             </p>
             <div className="version-info">
-              <span>Versión: 1.0.0 MVP</span>
+              <span>Versión: {packageJson.version}</span>
               <span>Desarrollado con ❤️ para el cuidado de tu bebé</span>
             </div>
             
@@ -442,6 +444,7 @@ const Profile: React.FC = () => {
           </div>
         </section>
       </main>
+      <AppFooter />
     </div>
   );
 };

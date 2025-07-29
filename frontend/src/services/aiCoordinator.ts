@@ -1,7 +1,7 @@
 // Coordinador de IA con contexto real del usuario
 import openaiService from './openaiService';
 import { AIProcessingCoordinatorV2 } from './aiAgents';
-import { MultiAgentCoordinator } from './multiAgentSystem';
+import EnhancedMultiAgentCoordinator from './enhancedMultiAgentCoordinator';
 import { type HealthRecord } from './databaseService';
 import ErrorHandler, { handleErrorWithFallback, type ErrorInfo } from './errorHandler';
 
@@ -47,7 +47,7 @@ interface ConversationState {
 
 export class ContextAwareAICoordinator {
   private coordinator: AIProcessingCoordinatorV2;
-  private multiAgentCoordinator: MultiAgentCoordinator;
+  private multiAgentCoordinator: EnhancedMultiAgentCoordinator;
   private profile: UserProfile | null = null;
   private recentRecords: HealthRecord[] = [];
   private currentStats: HealthStats | null = null;
@@ -57,7 +57,7 @@ export class ContextAwareAICoordinator {
 
   constructor() {
     this.coordinator = new AIProcessingCoordinatorV2();
-    this.multiAgentCoordinator = MultiAgentCoordinator.getInstance();
+    this.multiAgentCoordinator = EnhancedMultiAgentCoordinator.getInstance();
     this.conversationState = {
       answeredQuestions: new Set(),
       knownData: new Map(),
@@ -221,9 +221,13 @@ export class ContextAwareAICoordinator {
   }
 
   // Determinar si usar OpenAI basado en el input
-  private shouldUseOpenAI(input: string): boolean {
-    // Siempre usar OpenAI para extracción de datos de salud
-    return true;
+  private async shouldUseOpenAI(input: string): Promise<boolean> {
+    try {
+      const available = await openaiService.isAvailable();
+      return available;
+    } catch {
+      return false;
+    }
   }
 
   // Procesar input con contexto real
@@ -248,7 +252,7 @@ export class ContextAwareAICoordinator {
       await this.simulateProcessingStep('Clasificador', 'Identificando tipo de datos...', 200);
       
       // Determinar si usar OpenAI o procesamiento local
-      const shouldUseOpenAI = this.shouldUseOpenAI(input);
+      const shouldUseOpenAI = await this.shouldUseOpenAI(input);
       console.log('🔧 [DEBUG] Should use OpenAI:', shouldUseOpenAI);
       
       if (shouldUseOpenAI) {
