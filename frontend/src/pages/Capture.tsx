@@ -235,14 +235,14 @@ const Capture: React.FC = () => {
     const extractedData: ExtractedData = {
       type: finalData.primaryType || finalData.documentType || 'note',
       confidence: result.confidence || 0.5,
-      timestamp: finalData.date || new Date().toLocaleDateString('es-CL', { timeZone: 'America/Santiago' }) + 'T' + new Date().toLocaleTimeString('es-CL', { timeZone: 'America/Santiago', hour12: false }),
+      timestamp: finalData.date || new Date().toISOString(),
       data: {
         ...finalData.weight && { value: finalData.weight.value, unit: finalData.weight.unit },
         ...finalData.temperature && { value: finalData.temperature.value, unit: finalData.temperature.unit },
         ...finalData.height && { value: finalData.height.value, unit: finalData.height.unit },
         ...finalData.symptoms && { symptoms: finalData.symptoms },
         ...finalData.medications && { medications: finalData.medications },
-        date: finalData.date || new Date().toLocaleDateString('es-CL', { timeZone: 'America/Santiago' }) + 'T' + new Date().toLocaleTimeString('es-CL', { timeZone: 'America/Santiago', hour12: false })
+        date: finalData.date || new Date().toISOString()
       },
       notes: generateNotes(result),
       requiresAttention: (finalData.urgencyLevel && finalData.urgencyLevel > 2) || false

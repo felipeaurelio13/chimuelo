@@ -252,7 +252,7 @@ export class VisionAgent {
           age: undefined
         },
         extractedData: {
-          date: new Date().toLocaleDateString('es-CL', { timeZone: 'America/Santiago' }).split('/').reverse().join('-'),
+          date: new Date().toISOString().split('T')[0],
           provider: "Procesamiento fallido",
           mainFindings: [
                          `Error al procesar archivo: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -420,51 +420,164 @@ export class MedicalAgent {
   }
 
   private async analyzeMedicalContent(content: any): Promise<any> {
-    // Análisis médico especializado
-    return {
+    console.log('🔧 [DEBUG] MedicalAgent.analyzeMedicalContent iniciando con:', content);
+    
+    // Análisis médico especializado usando datos reales del Vision API
+    const medicalData = {
       symptoms: this.extractSymptoms(content),
       diagnoses: this.extractDiagnoses(content),
       treatments: this.extractTreatments(content),
+      measurements: this.extractMeasurements(content),
+      medications: this.extractMedications(content),
+      provider: this.extractProvider(content),
+      date: this.extractDate(content),
       alerts: this.identifyMedicalAlerts(content),
       followUp: this.extractFollowUp(content)
     };
+    
+    console.log('🔧 [DEBUG] MedicalAgent análisis completado:', medicalData);
+    return medicalData;
   }
 
   private extractSymptoms(content: any): string[] {
-    // Extracción de síntomas del contenido
-    return [];
+    // Extracción real de síntomas del contenido del Vision API
+    if (!content) return [];
+    
+    const findings = content.extractedData?.mainFindings || content.mainFindings || [];
+    const symptoms = findings.filter((finding: string) => 
+      finding.toLowerCase().includes('síntoma') ||
+      finding.toLowerCase().includes('dolor') ||
+      finding.toLowerCase().includes('fiebre') ||
+      finding.toLowerCase().includes('malestar')
+    );
+    
+    return symptoms;
   }
 
   private extractDiagnoses(content: any): string[] {
-    // Extracción de diagnósticos
-    return [];
+    // Extracción real de diagnósticos
+    if (!content) return [];
+    
+    const findings = content.extractedData?.mainFindings || content.mainFindings || [];
+    const diagnoses = findings.filter((finding: string) => 
+      finding.toLowerCase().includes('diagnóstico') ||
+      finding.toLowerCase().includes('evaluación') ||
+      finding.toLowerCase().includes('resultado')
+    );
+    
+    return diagnoses;
   }
 
   private extractTreatments(content: any): string[] {
-    // Extracción de tratamientos
-    return [];
+    // Extracción real de tratamientos
+    if (!content) return [];
+    
+    const recommendations = content.extractedData?.recommendations || content.recommendations || [];
+    const treatments = recommendations.filter((rec: string) => 
+      rec.toLowerCase().includes('tratamiento') ||
+      rec.toLowerCase().includes('medicamento') ||
+      rec.toLowerCase().includes('dosis') ||
+      rec.toLowerCase().includes('administrar')
+    );
+    
+    return treatments;
+  }
+
+  private extractMeasurements(content: any): any {
+    // Extracción real de mediciones
+    if (!content) return {};
+    
+    return content.extractedData?.measurements || content.measurements || {};
+  }
+
+  private extractMedications(content: any): any[] {
+    // Extracción real de medicamentos
+    if (!content) return [];
+    
+    return content.extractedData?.medications || content.medications || [];
+  }
+
+  private extractProvider(content: any): string | null {
+    // Extracción real del proveedor médico
+    if (!content) return null;
+    
+    return content.extractedData?.provider || content.provider || null;
+  }
+
+  private extractDate(content: any): string | null {
+    // Extracción real de fecha del documento
+    if (!content) return null;
+    
+    return content.extractedData?.date || content.date || null;
   }
 
   private identifyMedicalAlerts(content: any): string[] {
-    // Identificación de alertas médicas
-    return [];
+    // Identificación real de alertas médicas
+    if (!content) return [];
+    
+    const urgentFlags = content.extractedData?.urgentFlags || content.urgentFlags || [];
+    const allergyWarnings = content.analysisNotes?.allergyWarnings || [];
+    
+    return [...urgentFlags, ...allergyWarnings];
   }
 
   private extractFollowUp(content: any): string[] {
-    // Extracción de seguimientos necesarios
-    return [];
+    // Extracción real de seguimientos necesarios
+    if (!content) return [];
+    
+    const recommendations = content.extractedData?.recommendations || content.recommendations || [];
+    const followUp = recommendations.filter((rec: string) => 
+      rec.toLowerCase().includes('control') ||
+      rec.toLowerCase().includes('seguimiento') ||
+      rec.toLowerCase().includes('próxima') ||
+      rec.toLowerCase().includes('revisión')
+    );
+    
+    return followUp;
   }
 
   private generateMedicalRecommendations(analysis: any): string[] {
-    return [
-      'Revisar con pediatra si hay dudas',
-      'Continuar monitoreo según indicaciones'
-    ];
+    // Generar recomendaciones médicas basadas en análisis real
+    const recommendations = [];
+    
+    if (analysis.symptoms && analysis.symptoms.length > 0) {
+      recommendations.push('Monitorear síntomas reportados');
+    }
+    
+    if (analysis.measurements && Object.keys(analysis.measurements).length > 0) {
+      recommendations.push('Registrar mediciones en la ficha médica');
+    }
+    
+    if (analysis.alerts && analysis.alerts.length > 0) {
+      recommendations.push('⚠️ Consultar con pediatra por alertas identificadas');
+    }
+    
+    if (analysis.medications && analysis.medications.length > 0) {
+      recommendations.push('Seguir indicaciones de medicamentos prescritos');
+    }
+    
+    if (analysis.followUp && analysis.followUp.length > 0) {
+      recommendations.push('Programar citas de seguimiento indicadas');
+    }
+    
+    // Recomendaciones por defecto si no hay contenido específico
+    if (recommendations.length === 0) {
+      recommendations.push('Revisar con pediatra si hay dudas');
+      recommendations.push('Continuar monitoreo según indicaciones');
+    }
+    
+    return recommendations;
   }
 
   private shouldUpdateMedicalFicha(analysis: any): boolean {
-    // Determinar si se debe actualizar la ficha médica
-    return true;
+    // Determinar si se debe actualizar la ficha médica basado en contenido real
+    return !!(
+      (analysis.measurements && Object.keys(analysis.measurements).length > 0) ||
+      (analysis.medications && analysis.medications.length > 0) ||
+      (analysis.symptoms && analysis.symptoms.length > 0) ||
+      (analysis.diagnoses && analysis.diagnoses.length > 0) ||
+      (analysis.treatments && analysis.treatments.length > 0)
+    );
   }
 }
 
