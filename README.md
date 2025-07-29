@@ -79,6 +79,14 @@ cd chimuelo-health-tracker
 ./start_platform.sh worker   # Configurar Cloudflare Worker
 ```
 
+Luego instala las dependencias ejecutando:
+
+```bash
+npm ci --omit=optional
+```
+
+El proyecto utiliza la versión WASM de Rollup para evitar binarios específicos de plataforma.
+
 La aplicación estará disponible en: **http://localhost:5173**
 
 ### Configuración de OpenAI (Opcional)

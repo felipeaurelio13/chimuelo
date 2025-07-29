@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "version:patch": "npm version patch --no-git-tag-version",
     "version:minor": "npm version minor --no-git-tag-version",
-    "version:major": "npm version major --no-git-tag-version"
+    "version:major": "npm version major --no-git-tag-version",
+    "postinstall": "node scripts/setup-rollup-wasm.cjs"
   },
   "dependencies": {
     "@types/react-router-dom": "^5.3.3",
@@ -33,6 +34,7 @@
     "globals": "^16.3.0",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.35.1",
-    "vite": "^7.0.4"
+    "vite": "^7.0.4",
+    "@rollup/wasm-node": "^4.46.1"
   }
 }
