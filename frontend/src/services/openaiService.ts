@@ -57,12 +57,19 @@ class OpenAIService {
   
   // Verificar si el Worker está disponible
   async isAvailable(): Promise<boolean> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+
     try {
-      const response = await fetch(`${this.workerUrl}/health`);
+      const response = await fetch(`${this.workerUrl}/health`, {
+        signal: controller.signal
+      });
       return response.ok;
     } catch (error) {
       console.warn('Worker no disponible:', error);
       return false;
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
@@ -107,7 +114,9 @@ class OpenAIService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer demo-token` // Placeholder token
+          ...(import.meta.env.VITE_OPENAI_API_KEY && {
+            'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
+          })
         },
         body: JSON.stringify(extractRequest)
       });
@@ -186,7 +195,9 @@ class OpenAIService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer demo-token` // Placeholder token
+          ...(import.meta.env.VITE_OPENAI_API_KEY && {
+            'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
+          })
         },
         body: JSON.stringify(chatRequest)
       });

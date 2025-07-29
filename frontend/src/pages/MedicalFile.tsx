@@ -329,7 +329,7 @@ const MedicalFile: React.FC = () => {
   };
 
   const generateAIMilestones = async () => {
-    if (!babyProfile || !openaiService.isAvailable()) return;
+    if (!babyProfile || !(await openaiService.isAvailable())) return;
 
     setIsGeneratingMilestones(true);
     try {
