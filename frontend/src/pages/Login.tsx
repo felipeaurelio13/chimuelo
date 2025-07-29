@@ -163,14 +163,11 @@ const Login: React.FC = () => {
               />
               <button
                 type="button"
-                className="password-toggle-button"
+                className="password-toggle"
                 onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
               >
-                {showPassword ? (
-                  <i className="fas fa-eye-slash"></i>
-                ) : (
-                  <i className="fas fa-eye"></i>
-                )}
+                {showPassword ? '🙈' : '👁️'}
               </button>
             </div>
           </div>
