@@ -221,14 +221,8 @@ export class ContextAwareAICoordinator {
 
   // Determinar si usar OpenAI basado en el input
   private shouldUseOpenAI(input: string): boolean {
-    const complexKeywords = [
-      'síntoma', 'fiebre', 'temperatura', 'medicamento', 'vacuna',
-      'desarrollo', 'hito', 'milestone', 'alergia', 'erupción'
-    ];
-    
-    return complexKeywords.some(keyword => 
-      input.toLowerCase().includes(keyword)
-    );
+    // Siempre usar OpenAI para extracción de datos de salud
+    return true;
   }
 
   // Procesar input con contexto real

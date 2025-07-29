@@ -227,38 +227,20 @@ const Capture: React.FC = () => {
     // Procesar el resultado del nuevo sistema de IA
     let extractedData: ExtractedData;
     
-    if (result.type && result.data) {
-      // Nuevo formato del sistema mejorado
+    // El resultado viene directamente del worker, ya procesado por openaiService
+    if (result && typeof result === 'object') {
       extractedData = {
-        type: result.type,
+        type: result.type || 'note',
         confidence: result.confidence || 0.5,
-        timestamp: result.data.date || new Date().toISOString(),
+        timestamp: result.data?.date || new Date().toISOString(),
         data: {
-          value: result.data.value,
-          unit: result.data.unit,
-          date: result.data.date || new Date().toISOString(),
-          context: result.data.context || captureData.input
+          value: result.data?.value || captureData.input,
+          unit: result.data?.unit || 'text',
+          date: result.data?.date || new Date().toISOString(),
+          context: result.data?.context || captureData.input
         },
         notes: result.notes || generateNotes(result),
         requiresAttention: result.requiresAttention || false
-      };
-    } else if (result.extractedData) {
-      // Formato legacy para compatibilidad
-      const finalData = result.extractedData;
-      extractedData = {
-        type: finalData.primaryType || finalData.documentType || 'note',
-        confidence: result.confidence || 0.5,
-        timestamp: finalData.date || new Date().toISOString(),
-        data: {
-          ...finalData.weight && { value: finalData.weight.value, unit: finalData.weight.unit },
-          ...finalData.temperature && { value: finalData.temperature.value, unit: finalData.temperature.unit },
-          ...finalData.height && { value: finalData.height.value, unit: finalData.height.unit },
-          ...finalData.symptoms && { symptoms: finalData.symptoms },
-          ...finalData.medications && { medications: finalData.medications },
-          date: finalData.date || new Date().toISOString()
-        },
-        notes: generateNotes(result),
-        requiresAttention: (finalData.urgencyLevel && finalData.urgencyLevel > 2) || false
       };
     } else {
       // Fallback para casos inesperados
