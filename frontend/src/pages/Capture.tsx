@@ -1246,16 +1246,17 @@ const Capture: React.FC = () => {
                     <strong>Talla:</strong> {extractedData.data.value} {extractedData.data.unit || 'cm'}
                   </div>
                 )}
-                {extractedData.type === 'note' && extractedData.data?.content && (
+                {extractedData.type === 'note' && extractedData.data?.value && (
                   <div className="data-field">
-                    <strong>Nota:</strong> {extractedData.data.content}
+                    <strong>Nota:</strong> {extractedData.data.value}
                   </div>
                 )}
                 {/* Mostrar datos sin formato específico */}
                 {!['weight', 'temperature', 'height', 'note'].includes(extractedData.type) && (
-                  <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                    {JSON.stringify(extractedData.data, null, 2)}
-                  </pre>
+                  <div className="data-field">
+                    <strong>{extractedData.type.charAt(0).toUpperCase() + extractedData.type.slice(1)}:</strong> {extractedData.data?.value || 'Sin datos específicos'}
+                    {extractedData.data?.unit && <span> {extractedData.data.unit}</span>}
+                  </div>
                 )}
               </div>
 
