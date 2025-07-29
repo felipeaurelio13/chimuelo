@@ -2,7 +2,7 @@
 
 > **Plataforma inteligente de seguimiento de salud infantil con IA avanzada y funcionalidad offline completa**
 
-![Version](https://img.shields.io/badge/version-2.5.1-blue.svg)
+![Version](https://img.shields.io/badge/version-2.5.2-blue.svg)
 ![React](https://img.shields.io/badge/React-19.1.0-61dafb.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6.svg)
 ![PWA](https://img.shields.io/badge/PWA-Ready-orange.svg)
@@ -78,6 +78,14 @@ cd chimuelo-health-tracker
 ./start_platform.sh setup    # Solo instalar dependencias
 ./start_platform.sh worker   # Configurar Cloudflare Worker
 ```
+
+Luego instala las dependencias ejecutando:
+
+```bash
+npm ci --omit=optional
+```
+
+El proyecto utiliza la versión WASM de Rollup para evitar binarios específicos de plataforma.
 
 La aplicación estará disponible en: **http://localhost:5173**
 
@@ -227,7 +235,7 @@ test: tests para el service worker
 
 ## 📋 Roadmap de Desarrollo
 
-### ✅ Completado (v2.5.1)
+### ✅ Completado (v2.5.2)
 - ✅ Sistema de temas completamente funcional
 - ✅ Worker de Cloudflare con OpenAI completo
 - ✅ Timeline con error boundary y skeleton loading
