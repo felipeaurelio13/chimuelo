@@ -103,10 +103,16 @@ const Capture: React.FC = () => {
   // Generar notas inteligentes basadas en el análisis
   const generateNotes = (result: any): string => {
     if (import.meta.env.VITE_DEV === 'TRUE') {
-      console.log('Capture: Generating notes from AI result.');
+      console.log('🔧 [DEBUG] Capture: Generating notes from AI result.');
     }
     const notes: string[] = [];
-    const { finalData } = result;
+    
+    // Defensive programming: handle both old and new AI system formats
+    const finalData = result?.finalData || result?.extractedData || {};
+    
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('🔧 [DEBUG] Capture: finalData for notes:', finalData);
+    }
     
     // Agregar resumen de hallazgos
     if (finalData.weight) {
@@ -120,9 +126,15 @@ const Capture: React.FC = () => {
     }
     
     // Agregar sugerencias si las hay
-    if (result.suggestions.length > 0) {
+    if (result.suggestions && result.suggestions.length > 0) {
       notes.push('\nSugerencias:');
       result.suggestions.forEach((s: string) => notes.push(`• ${s}`));
+    }
+    
+    // Agregar recomendaciones del sistema multiagente
+    if (result.recommendations && result.recommendations.length > 0) {
+      notes.push('\nRecomendaciones:');
+      result.recommendations.forEach((r: string) => notes.push(`• ${r}`));
     }
     
     // Agregar etiquetas automáticas
@@ -131,7 +143,7 @@ const Capture: React.FC = () => {
     }
     
     if (import.meta.env.VITE_DEV === 'TRUE') {
-      console.log('Capture: Generated notes:', notes.join('\n').substring(0, 100), '...');
+      console.log('🔧 [DEBUG] Capture: Generated notes:', notes.join('\n').substring(0, 100), '...');
     }
     return notes.join('\n');
   };
@@ -199,14 +211,20 @@ const Capture: React.FC = () => {
   // Procesar resultado de IA
   const processAiResult = useCallback(async (result: any) => {
     if (import.meta.env.VITE_DEV === 'TRUE') {
-      console.log('Capture: Processing AI final result.', result);
+      console.log('🔧 [DEBUG] Capture: Processing AI final result.', result);
     }
-    const { finalData } = result;
+    
+    // Defensive programming: handle both old and new AI system formats
+    const finalData = result?.finalData || result?.extractedData || {};
+    
+    if (import.meta.env.VITE_DEV === 'TRUE') {
+      console.log('🔧 [DEBUG] Capture: finalData extracted:', finalData);
+    }
     
     // Convertir a formato ExtractedData
     const extractedData: ExtractedData = {
-      type: finalData.primaryType || 'note',
-      confidence: result.confidence,
+      type: finalData.primaryType || finalData.documentType || 'note',
+      confidence: result.confidence || 0.5,
       timestamp: finalData.date || new Date().toISOString(),
       data: {
         ...finalData.weight && { value: finalData.weight.value, unit: finalData.weight.unit },
@@ -217,7 +235,7 @@ const Capture: React.FC = () => {
         date: finalData.date || new Date().toISOString()
       },
       notes: generateNotes(result),
-      requiresAttention: finalData.urgencyLevel > 2
+      requiresAttention: (finalData.urgencyLevel && finalData.urgencyLevel > 2) || false
     };
     
     setExtractedData(extractedData);
