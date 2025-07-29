@@ -2,7 +2,7 @@
 
 > **Plataforma inteligente de seguimiento de salud infantil con IA avanzada y funcionalidad offline completa**
 
-![Version](https://img.shields.io/badge/version-2.5.2-blue.svg)
+![Version](https://img.shields.io/badge/version-2.5.3-blue.svg)
 ![React](https://img.shields.io/badge/React-19.1.0-61dafb.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6.svg)
 ![PWA](https://img.shields.io/badge/PWA-Ready-orange.svg)
@@ -227,7 +227,7 @@ test: tests para el service worker
 
 ## 📋 Roadmap de Desarrollo
 
-### ✅ Completado (v2.5.2)
+### ✅ Completado (v2.5.3)
 - ✅ Sistema de temas completamente funcional
 - ✅ Worker de Cloudflare con OpenAI completo
 - ✅ Timeline con error boundary y skeleton loading
