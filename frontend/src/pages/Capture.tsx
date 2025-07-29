@@ -221,9 +221,9 @@ const Capture: React.FC = () => {
 
   // Procesar resultado de IA
   const processAiResult = useCallback(async (result: any) => {
-    if (import.meta.env.VITE_DEV === 'TRUE') {
-      console.log('🔧 [DEBUG] Capture: Processing AI final result.', result);
-    }
+    console.log('🔧 [DEBUG] Capture: Processing AI final result.', result);
+    console.log('🔧 [DEBUG] Result type:', typeof result);
+    console.log('🔧 [DEBUG] Result keys:', result ? Object.keys(result) : 'null/undefined');
     
     // Procesar el resultado del nuevo sistema de IA
     let extractedData: ExtractedData;
@@ -231,6 +231,14 @@ const Capture: React.FC = () => {
     try {
       // El resultado viene directamente del worker, ya procesado por openaiService
       if (result && typeof result === 'object') {
+        console.log('🔧 [DEBUG] Procesando resultado válido');
+        
+        // Verificar estructura del resultado
+        if (!result.data) {
+          console.warn('🔧 [DEBUG] Result no tiene data, usando fallback');
+          throw new Error('Estructura de resultado inválida: falta data');
+        }
+        
         extractedData = {
           type: result.type || 'note',
           confidence: result.confidence || 0.5,
@@ -244,30 +252,24 @@ const Capture: React.FC = () => {
           notes: result.notes || generateNotes(result),
           requiresAttention: result.requiresAttention || false
         };
+        
+        console.log('🔧 [DEBUG] ExtractedData creado:', extractedData);
       } else {
-        // Fallback para casos inesperados
-        extractedData = {
-          type: 'note',
-          confidence: 0.3,
-          timestamp: new Date().toISOString(),
-          data: {
-            value: captureData.input,
-            unit: 'text',
-            date: new Date().toISOString(),
-            context: 'Análisis básico'
-          },
-          notes: 'No se pudo extraer información estructurada',
-          requiresAttention: false
-        };
+        console.warn('🔧 [DEBUG] Result inválido, usando fallback');
+        throw new Error('Resultado de IA inválido');
       }
       
       // Validar que los datos extraídos sean válidos
       if (!extractedData.data?.value) {
+        console.warn('🔧 [DEBUG] No se pudo extraer valor, usando fallback');
         throw new Error('No se pudo extraer valor de los datos');
       }
       
+      console.log('🔧 [DEBUG] Validación exitosa, datos extraídos:', extractedData.data.value);
+      
     } catch (error) {
-      console.error('Error procesando resultado de IA:', error);
+      console.error('❌ Error procesando resultado de IA:', error);
+      console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       
       // Crear error info para logging
       const errorInfo = ErrorHandler.createUIError(error, { 
@@ -290,8 +292,11 @@ const Capture: React.FC = () => {
         notes: errorInfo.userMessage,
         requiresAttention: false
       };
+      
+      console.log('🔧 [DEBUG] Usando fallback debido a error:', extractedData);
     }
     
+    console.log('🔧 [DEBUG] Estableciendo extractedData:', extractedData);
     setExtractedData(extractedData);
     setShowPreview(true);
     setShowClarificationDialog(false);
@@ -306,9 +311,7 @@ const Capture: React.FC = () => {
     const validationResult = validateExtractedData(extractedData);
     setValidation(validationResult);
     
-    if (import.meta.env.VITE_DEV === 'TRUE') {
-      console.log('Capture: Extracted data set and validated.', extractedData, validationResult);
-    }
+    console.log('🔧 [DEBUG] Capture: Extracted data set and validated.', extractedData, validationResult);
   }, [generateNotes, validateExtractedData, captureData.input]);
 
   // Handle file upload
@@ -493,19 +496,20 @@ const Capture: React.FC = () => {
     setProcessError(null);
     setShowPreview(false);
     
+    console.log('🔧 [DEBUG] Capture: Iniciando procesamiento con AI');
+    console.log('🔧 [DEBUG] Input:', captureData.input);
+    console.log('🔧 [DEBUG] User:', user?.id);
+    
     try {
-      if (import.meta.env.VITE_DEV === 'TRUE') {
-        console.log('Capture: Initiating multi-agent processing.');
-      }
+      console.log('🔧 [DEBUG] Configurando callback para pasos de procesamiento');
       
       // Configurar callback para mostrar pasos de procesamiento
       contextAwareAI.setStepUpdateCallback((step: any) => {
-        if (import.meta.env.VITE_DEV === 'TRUE') {
-          console.log(`🤖 ${step.agent || 'AI'}: ${step.description || step.action || 'Processing'}`);
-        }
+        console.log(`🤖 ${step.agent || 'AI'}: ${step.description || step.action || 'Processing'}`);
       });
       
       // Obtener contexto del usuario para enriquecer el análisis
+      console.log('🔧 [DEBUG] Obteniendo contexto del usuario');
       const userContext = {
         profile: {
           babyName: user?.babyName,
@@ -517,29 +521,35 @@ const Capture: React.FC = () => {
         currentStats: await getCurrentHealthStats() || undefined
       };
       
+      console.log('🔧 [DEBUG] UserContext creado:', {
+        profileKeys: Object.keys(userContext.profile || {}),
+        recentRecordsCount: userContext.recentRecords?.length || 0,
+        hasCurrentStats: !!userContext.currentStats
+      });
+      
       // Usar el coordinador de IA con contexto real
+      console.log('🔧 [DEBUG] Llamando a contextAwareAI.processWithContext...');
       const result = await contextAwareAI.processWithContext(
         captureData.input,
         userContext
       );
       
-      if (import.meta.env.VITE_DEV === 'TRUE') {
-        console.log('Capture: Multi-agent processing result:', result);
-      }
+      console.log('🔧 [DEBUG] Resultado de contextAwareAI:', result);
+      console.log('🔧 [DEBUG] Result type:', typeof result);
+      console.log('🔧 [DEBUG] Result keys:', result ? Object.keys(result) : 'null/undefined');
       
       setAiProcessingResult(result);
       
       // Procesar el resultado directamente (sin mock data)
+      console.log('🔧 [DEBUG] Llamando a processAiResult...');
       await processAiResult(result);
       
+      console.log('🔧 [DEBUG] Procesamiento completado exitosamente');
+      
     } catch (error: unknown) {
-      if (import.meta.env.VITE_DEV === 'TRUE') {
-        if (error instanceof Error) {
-          console.error('Capture: Error processing with AI:', error.message);
-        } else {
-          console.error('Capture: Error processing with AI:', error);
-        }
-      }
+      console.error('❌ Error crítico en procesamiento con AI:', error);
+      console.error('❌ Error type:', typeof error);
+      console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       
       // Crear error info para logging
       const errorInfo = ErrorHandler.handleError(error, { 
@@ -548,15 +558,38 @@ const Capture: React.FC = () => {
       });
       ErrorHandler.getInstance().logError(errorInfo);
       
+      console.log('🔧 [DEBUG] ErrorInfo creado:', errorInfo);
+      
       // Mostrar error amigable al usuario
       setProcessError(errorInfo.userMessage);
       
       // Si hay un error crítico, mostrar información adicional
       if (errorInfo.severity === 'critical') {
-        console.error('Error crítico detectado:', errorInfo);
+        console.error('❌ Error crítico detectado:', errorInfo);
         // Aquí podrías mostrar un modal o notificación especial
       }
+      
+      // Crear fallback para prevenir pantalla en blanco
+      const fallbackData: ExtractedData = {
+        type: 'note',
+        confidence: 0.1,
+        timestamp: new Date().toISOString(),
+        data: {
+          value: captureData.input || 'Texto no disponible',
+          unit: 'text',
+          date: new Date().toISOString(),
+          context: 'Análisis básico por error crítico'
+        },
+        notes: errorInfo.userMessage,
+        requiresAttention: false
+      };
+      
+      console.log('🔧 [DEBUG] Estableciendo fallback data:', fallbackData);
+      setExtractedData(fallbackData);
+      setShowPreview(true);
+      
     } finally {
+      console.log('🔧 [DEBUG] Finalizando procesamiento, estableciendo isProcessing = false');
       setIsProcessing(false);
     }
   }, [captureData.input, isInputReadyForAI, contextAwareAI, processAiResult, user]);

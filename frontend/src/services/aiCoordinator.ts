@@ -228,41 +228,57 @@ export class ContextAwareAICoordinator {
 
   // Procesar input con contexto real
   async processWithContext(input: string, userContext: ContextualInput = {}): Promise<any> {
+    console.log('🔧 [DEBUG] ContextAwareAICoordinator.processWithContext iniciando...');
+    console.log('🔧 [DEBUG] Input:', input);
+    console.log('🔧 [DEBUG] UserContext keys:', Object.keys(userContext));
+    
     this.resetProcessingSteps();
     
     try {
       // Paso 1: Análisis inicial
+      console.log('🔧 [DEBUG] Paso 1: Análisis inicial');
       await this.simulateProcessingStep('Analizador Principal', 'Iniciando análisis del texto...', 300);
       
       // Enriquecer input con contexto
       const enrichedInput = this.enrichInputWithProfile(input, userContext);
+      console.log('🔧 [DEBUG] Input enriquecido:', enrichedInput);
       
       // Paso 2: Clasificación de contenido
+      console.log('🔧 [DEBUG] Paso 2: Clasificación de contenido');
       await this.simulateProcessingStep('Clasificador', 'Identificando tipo de datos...', 200);
       
       // Determinar si usar OpenAI o procesamiento local
       const shouldUseOpenAI = this.shouldUseOpenAI(input);
+      console.log('🔧 [DEBUG] Should use OpenAI:', shouldUseOpenAI);
       
       if (shouldUseOpenAI) {
         // Paso 3: Procesamiento con OpenAI
+        console.log('🔧 [DEBUG] Paso 3: Procesamiento con OpenAI');
         await this.simulateProcessingStep('IA Avanzada', 'Procesando con inteligencia artificial...', 800);
-        return await this.processWithOpenAI(enrichedInput, userContext);
+        const result = await this.processWithOpenAI(enrichedInput, userContext);
+        console.log('🔧 [DEBUG] Resultado OpenAI:', result);
+        return result;
       } else {
         // Paso 4: Procesamiento local con multi-agentes
+        console.log('🔧 [DEBUG] Paso 4: Procesamiento local con multi-agentes');
         await this.simulateProcessingStep('Sistema Multi-Agente', 'Procesando con agentes especializados...', 600);
-        return await this.processWithMultiAgents(enrichedInput, userContext);
+        const result = await this.processWithMultiAgents(enrichedInput, userContext);
+        console.log('🔧 [DEBUG] Resultado Multi-Agent:', result);
+        return result;
       }
     } catch (error) {
-      console.error('Error en processWithContext:', error);
+      console.error('❌ Error crítico en processWithContext:', error);
+      console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       
       // Paso 5: Fallback en caso de error
+      console.log('🔧 [DEBUG] Paso 5: Aplicando fallback');
       await this.simulateProcessingStep('Sistema de Respaldo', 'Aplicando análisis básico...', 200);
       
       // Crear error info para logging
       const errorInfo = ErrorHandler.createAIError(error, { input, userContext });
       ErrorHandler.getInstance().logError(errorInfo);
       
-      return {
+      const fallbackResult = {
         type: 'note',
         data: {
           value: input,
@@ -280,18 +296,30 @@ export class ContextAwareAICoordinator {
         },
         error: errorInfo
       };
+      
+      console.log('🔧 [DEBUG] Fallback result:', fallbackResult);
+      return fallbackResult;
     }
   }
 
   // Procesar con OpenAI
   private async processWithOpenAI(enrichedInput: string, userContext: ContextualInput): Promise<any> {
+    console.log('🔧 [DEBUG] processWithOpenAI iniciando...');
+    console.log('🔧 [DEBUG] EnrichedInput:', enrichedInput);
+    
     try {
+      console.log('🔧 [DEBUG] Llamando a openaiService.extractHealthData...');
       const result = await openaiService.extractHealthData(enrichedInput, 'text');
+      console.log('🔧 [DEBUG] Resultado de OpenAI:', result);
       
       // Mezclar con procesamiento local para validación
-      return this.mergeWithLocalProcessing(result, enrichedInput, userContext);
+      const mergedResult = this.mergeWithLocalProcessing(result, enrichedInput, userContext);
+      console.log('🔧 [DEBUG] Resultado mezclado:', mergedResult);
+      return mergedResult;
+      
     } catch (error) {
-      console.error('Error en OpenAI processing:', error);
+      console.error('❌ Error en OpenAI processing:', error);
+      console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       
       // Crear error info específico para OpenAI
       const errorInfo = ErrorHandler.createAIError(error, { 
@@ -302,7 +330,7 @@ export class ContextAwareAICoordinator {
       ErrorHandler.getInstance().logError(errorInfo);
       
       // Retornar fallback con información del error
-      return {
+      const fallbackResult = {
         type: 'note',
         data: {
           value: enrichedInput,
@@ -320,11 +348,17 @@ export class ContextAwareAICoordinator {
         },
         error: errorInfo
       };
+      
+      console.log('🔧 [DEBUG] Fallback result para OpenAI:', fallbackResult);
+      return fallbackResult;
     }
   }
 
   // Procesar con sistema multi-agente
   private async processWithMultiAgents(enrichedInput: string, userContext: ContextualInput): Promise<any> {
+    console.log('🔧 [DEBUG] processWithMultiAgents iniciando...');
+    console.log('🔧 [DEBUG] EnrichedInput:', enrichedInput);
+    
     try {
       const agentInput = {
         id: `input_${Date.now()}`,
@@ -335,9 +369,18 @@ export class ContextAwareAICoordinator {
         context: userContext
       };
 
+      console.log('🔧 [DEBUG] AgentInput creado:', {
+        id: agentInput.id,
+        type: agentInput.type,
+        contentLength: agentInput.content.length,
+        contextKeys: Object.keys(agentInput.context || {})
+      });
+
+      console.log('🔧 [DEBUG] Llamando a multiAgentCoordinator.processInput...');
       const result = await this.multiAgentCoordinator.processInput(agentInput);
+      console.log('🔧 [DEBUG] Resultado de multiAgentCoordinator:', result);
       
-      return {
+      const processedResult = {
         type: result.classification,
         data: {
           value: result.extractedData,
@@ -354,9 +397,39 @@ export class ContextAwareAICoordinator {
           errors: []
         }
       };
+      
+      console.log('🔧 [DEBUG] Resultado procesado:', processedResult);
+      return processedResult;
+      
     } catch (error) {
-      console.error('Error en multi-agent processing:', error);
-      throw error;
+      console.error('❌ Error en multi-agent processing:', error);
+      console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      
+      // Crear fallback robusto para multi-agents
+      const fallbackResult = {
+        type: 'note',
+        data: {
+          value: enrichedInput,
+          unit: 'text',
+          date: new Date().toISOString(),
+          context: 'Análisis básico por error en multi-agentes'
+        },
+        confidence: 0.2,
+        requiresAttention: false,
+        notes: 'Error en procesamiento multi-agente. Usando análisis básico.',
+        validation: {
+          isValid: true,
+          warnings: ['Procesamiento limitado debido a error en multi-agentes'],
+          errors: [error instanceof Error ? error.message : 'Error desconocido en multi-agentes']
+        },
+        error: {
+          message: error instanceof Error ? error.message : 'Error desconocido',
+          source: 'multi_agent_system'
+        }
+      };
+      
+      console.log('🔧 [DEBUG] Fallback result para multi-agents:', fallbackResult);
+      return fallbackResult;
     }
   }
 
