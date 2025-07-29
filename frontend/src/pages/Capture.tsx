@@ -8,6 +8,7 @@ import { contextAwareAICoordinator as contextAwareAI } from '../services/aiCoord
 import { type HealthRecord, type HealthStats } from '../services/databaseService';
 import { type ProcessingResult } from '../services/aiAgents';
 import AgentConversationViewer from '../components/AgentConversationViewer';
+import AppFooter from '../components/AppFooter';
 import ErrorHandler, { type ErrorInfo } from '../services/errorHandler';
 import '../styles/Capture.css';
 
@@ -1407,6 +1408,7 @@ const Capture: React.FC = () => {
         isVisible={showAgentViewer}
         onClose={() => setShowAgentViewer(false)}
       />
+      <AppFooter />
     </div>
   );
 };

@@ -241,6 +241,7 @@ test: tests para el service worker
 - ✅ Timeline con error boundary y skeleton loading
 - ✅ IA context-aware con información del bebé
 - ✅ PWA completa con funcionalidad offline
+- ✅ Versión visible en todas las vistas mediante footer unificado
 - ✅ Settings con configuración avanzada
 - ✅ Service worker con estrategias de cache
 - ✅ Sistema de build y deployment automatizado

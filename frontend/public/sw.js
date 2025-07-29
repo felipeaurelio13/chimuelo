@@ -1,6 +1,5 @@
 // Service Worker para Chimuelo Health Tracker PWA
 // Versión del cache - incrementar para forzar actualización
-
 const CACHE_VERSION = 'chimuelo-v2.5.6';
 const CACHE_NAME = `chimuelo-cache-${CACHE_VERSION}`;
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
+import AppFooter from '../components/AppFooter';
 import '../styles/Auth.css';
 
 const Login: React.FC = () => {
@@ -183,6 +184,7 @@ const Login: React.FC = () => {
           </p>
         </form>
       </div>
+      <AppFooter />
     </div>
   );
 };
