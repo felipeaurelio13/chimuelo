@@ -252,7 +252,7 @@ export class VisionAgent {
           age: undefined
         },
         extractedData: {
-          date: new Date().toISOString().split('T')[0],
+          date: new Date().toLocaleDateString('es-CL', { timeZone: 'America/Santiago' }).split('/').reverse().join('-'),
           provider: "Procesamiento fallido",
           mainFindings: [
                          `Error al procesar archivo: ${error instanceof Error ? error.message : 'Error desconocido'}`,

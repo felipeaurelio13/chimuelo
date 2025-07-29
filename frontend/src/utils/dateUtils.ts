@@ -231,3 +231,139 @@ export function formatMilestoneTime(expectedDate: Date, currentDate: Date = new 
     }
   }
 }
+
+// Utilidades para manejo de fechas en horario chileno
+// Chile está en UTC-4 (horario estándar) o UTC-3 (horario de verano)
+
+/**
+ * Obtiene la fecha y hora actual en horario chileno
+ */
+export function getChileDateTime(): Date {
+  // Crear fecha con timezone de Chile
+  const now = new Date();
+  const chileTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Santiago"}));
+  return chileTime;
+}
+
+/**
+ * Convierte una fecha a horario chileno
+ */
+export function toChileTime(date: Date): Date {
+  const chileTime = new Date(date.toLocaleString("en-US", {timeZone: "America/Santiago"}));
+  return chileTime;
+}
+
+/**
+ * Formatea una fecha en horario chileno
+ */
+export function formatChileDate(date: Date): string {
+  return date.toLocaleDateString('es-CL', {
+    timeZone: 'America/Santiago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+}
+
+/**
+ * Formatea fecha y hora en horario chileno
+ */
+export function formatChileDateTime(date: Date): string {
+  return date.toLocaleString('es-CL', {
+    timeZone: 'America/Santiago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+/**
+ * Obtiene un timestamp ISO string en horario chileno
+ */
+export function getChileISOString(): string {
+  const chileTime = getChileDateTime();
+  return chileTime.toISOString();
+}
+
+/**
+ * Parsea una fecha asegurando que esté en contexto chileno
+ */
+export function parseChileDate(dateString: string): Date {
+  const parsed = new Date(dateString);
+  // Si la fecha no tiene timezone, asumimos que es chilena
+  if (!dateString.includes('T') && !dateString.includes('Z')) {
+    return new Date(dateString + 'T00:00:00-03:00'); // Asumimos UTC-3
+  }
+  return parsed;
+}
+
+/**
+ * Calcula la edad en días desde una fecha de nacimiento
+ */
+export function calculateAgeInDays(birthDate: Date): number {
+  const now = getChileDateTime();
+  const birth = toChileTime(birthDate);
+  const diffTime = Math.abs(now.getTime() - birth.getTime());
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+}
+
+/**
+ * Calcula la edad en semanas desde una fecha de nacimiento
+ */
+export function calculateAgeInWeeks(birthDate: Date): number {
+  const days = calculateAgeInDays(birthDate);
+  return Math.floor(days / 7);
+}
+
+/**
+ * Calcula la edad en meses desde una fecha de nacimiento
+ */
+export function calculateAgeInMonths(birthDate: Date): number {
+  const now = getChileDateTime();
+  const birth = toChileTime(birthDate);
+  
+  let months = (now.getFullYear() - birth.getFullYear()) * 12;
+  months += now.getMonth() - birth.getMonth();
+  
+  // Ajustar si el día actual es anterior al día de nacimiento
+  if (now.getDate() < birth.getDate()) {
+    months--;
+  }
+  
+  return Math.max(0, months);
+}
+
+/**
+ * Formato amigable de edad para bebés
+ */
+export function formatBabyAge(birthDate: Date): string {
+  const days = calculateAgeInDays(birthDate);
+  const weeks = calculateAgeInWeeks(birthDate);
+  const months = calculateAgeInMonths(birthDate);
+  
+  if (days < 14) {
+    return `${days} día${days !== 1 ? 's' : ''}`;
+  } else if (weeks < 8) {
+    return `${weeks} semana${weeks !== 1 ? 's' : ''}`;
+  } else {
+    const remainingWeeks = weeks % 4;
+    if (months < 12) {
+      if (remainingWeeks === 0) {
+        return `${months} mes${months !== 1 ? 'es' : ''}`;
+      } else {
+        return `${months} mes${months !== 1 ? 'es' : ''} y ${remainingWeeks} semana${remainingWeeks !== 1 ? 's' : ''}`;
+      }
+    } else {
+      const years = Math.floor(months / 12);
+      const remainingMonths = months % 12;
+      if (remainingMonths === 0) {
+        return `${years} año${years !== 1 ? 's' : ''}`;
+      } else {
+        return `${years} año${years !== 1 ? 's' : ''} y ${remainingMonths} mes${remainingMonths !== 1 ? 'es' : ''}`;
+      }
+    }
+  }
+}

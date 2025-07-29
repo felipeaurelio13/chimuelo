@@ -131,10 +131,20 @@ const Capture: React.FC = () => {
       result.suggestions.forEach((s: string) => notes.push(`• ${s}`));
     }
     
-    // Agregar recomendaciones del sistema multiagente
+    // Agregar recomendaciones del sistema multiagente (filtrar preguntas)
     if (result.recommendations && result.recommendations.length > 0) {
-      notes.push('\nRecomendaciones:');
-      result.recommendations.forEach((r: string) => notes.push(`• ${r}`));
+      const actualRecommendations = result.recommendations.filter((r: string) => 
+        !r.includes('?') && // Filtrar preguntas
+        !r.toLowerCase().includes('¿') && // Filtrar preguntas en español
+        !r.toLowerCase().includes('pregunta') &&
+        !r.toLowerCase().includes('consulta') &&
+        r.length > 10 // Filtrar recomendaciones muy cortas
+      );
+      
+      if (actualRecommendations.length > 0) {
+        notes.push('\nRecomendaciones:');
+        actualRecommendations.forEach((r: string) => notes.push(`• ${r}`));
+      }
     }
     
     // Agregar etiquetas automáticas
@@ -225,14 +235,14 @@ const Capture: React.FC = () => {
     const extractedData: ExtractedData = {
       type: finalData.primaryType || finalData.documentType || 'note',
       confidence: result.confidence || 0.5,
-      timestamp: finalData.date || new Date().toISOString(),
+      timestamp: finalData.date || new Date().toLocaleDateString('es-CL', { timeZone: 'America/Santiago' }) + 'T' + new Date().toLocaleTimeString('es-CL', { timeZone: 'America/Santiago', hour12: false }),
       data: {
         ...finalData.weight && { value: finalData.weight.value, unit: finalData.weight.unit },
         ...finalData.temperature && { value: finalData.temperature.value, unit: finalData.temperature.unit },
         ...finalData.height && { value: finalData.height.value, unit: finalData.height.unit },
         ...finalData.symptoms && { symptoms: finalData.symptoms },
         ...finalData.medications && { medications: finalData.medications },
-        date: finalData.date || new Date().toISOString()
+        date: finalData.date || new Date().toLocaleDateString('es-CL', { timeZone: 'America/Santiago' }) + 'T' + new Date().toLocaleTimeString('es-CL', { timeZone: 'America/Santiago', hour12: false })
       },
       notes: generateNotes(result),
       requiresAttention: (finalData.urgencyLevel && finalData.urgencyLevel > 2) || false

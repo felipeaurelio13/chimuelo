@@ -1,19 +1,24 @@
 /* Global Design System - Professional Mobile-First for Healthcare */
 
 :root {
-  /* Core Brand Colors - Professional & Trustworthy */
-  --primary-600: #4F46E5;       /* Primary indigo - trust */
-  --primary-500: #6366F1;       /* Lighter primary for interactions */
-  --primary-50: #EEF2FF;        /* Subtle primary background */
+  /* Core Brand Colors - Medical & Professional */
+  --primary-600: #0f766e;       /* Medical teal - trust & health */
+  --primary-500: #14b8a6;       /* Lighter primary for interactions */
+  --primary-50: #f0fdfa;        /* Subtle primary background */
   --secondary-600: #059669;     /* Success green - health */
   --secondary-500: #10B981;     /* Lighter success */
   --secondary-50: #ECFDF5;      /* Subtle success background */
-  --accent-600: #DC2626;        /* Alert red - important */
-  --accent-500: #EF4444;        /* Lighter alert */
-  --accent-50: #FEF2F2;         /* Subtle alert background */
-  --warm-600: #D97706;          /* Warm amber - comfort */
-  --warm-500: #F59E0B;          /* Lighter warm */
-  --warm-50: #FFFBEB;           /* Subtle warm background */
+  --accent-600: #ef4444;        /* Medical red - important */
+  --accent-500: #f87171;        /* Lighter alert */
+  --accent-50: #fef2f2;         /* Subtle alert background */
+  --warm-600: #f59e0b;          /* Medical amber - warnings */
+  --warm-500: #fbbf24;          /* Lighter warm */
+  --warm-50: #fefbeb;           /* Subtle warm background */
+  
+  /* Additional Medical Colors */
+  --medical-blue: #3b82f6;      /* Information blue */
+  --medical-purple: #8b5cf6;    /* Special procedures */
+  --medical-orange: #f97316;    /* Urgent attention */
   
   /* Neutral Grays - Perfect Contrast */
   --gray-900: #111827;          /* Deepest text */

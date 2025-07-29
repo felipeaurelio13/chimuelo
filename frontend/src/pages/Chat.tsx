@@ -180,6 +180,15 @@ const Chat: React.FC = () => {
     // Send the analysis as a message for AI to process
     setInputData(prev => ({ ...prev, message: analysisMessage }));
     setShowSuggestions(false);
+    setShowDocumentModal(false);
+    
+    // Show success notification
+    console.log('✅ Documento analizado exitosamente');
+    
+    // Automatically send the message for better UX
+    setTimeout(() => {
+      handleSendMessage();
+    }, 500);
   };
 
   // Create new chat session

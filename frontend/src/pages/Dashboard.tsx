@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { dataIntegrityService } from '../services/dataIntegrityService';
 import AppFooter from '../components/AppFooter';
 import MultiAgentSystemViewer from '../components/MultiAgentSystemViewer';
+import DataStorageInfo from '../components/DataStorageInfo';
 
 const getActivityIcon = (type: string): string => {
   const iconMap: Record<string, string> = {
@@ -225,6 +226,13 @@ const Dashboard: React.FC = () => {
           </div>
         </section>
       )}
+
+      {/* Data Storage Information */}
+      <section className="data-info-section">
+        <div className="container">
+          <DataStorageInfo />
+        </div>
+      </section>
 
              {/* Footer */}
        <AppFooter />
