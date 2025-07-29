@@ -2,7 +2,7 @@
 
 > **Plataforma inteligente de seguimiento de salud infantil con IA avanzada y funcionalidad offline completa**
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.5.4-blue.svg)
 ![React](https://img.shields.io/badge/React-19.1.0-61dafb.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6.svg)
 ![PWA](https://img.shields.io/badge/PWA-Ready-orange.svg)
@@ -18,7 +18,7 @@ Chimuelo es una aplicación web progresiva (PWA) diseñada específicamente para
 - **Contexto del bebé** integrado en todas las consultas
 - **Predicciones de salud** basadas en patrones históricos
 - **Preguntas inteligentes** que evitan redundancia
-- **Fallback local** cuando OpenAI no está disponible
+ - **Fallback local** con coordinador multiagente cuando OpenAI no está disponible
 
 ### 📱 **PWA Nativa Completa**
 - **Instalación nativa** en dispositivos móviles y desktop
@@ -227,7 +227,7 @@ test: tests para el service worker
 
 ## 📋 Roadmap de Desarrollo
 
-### ✅ Completado (v1.0.0)
+### ✅ Completado (v2.5.4)
 - ✅ Sistema de temas completamente funcional
 - ✅ Worker de Cloudflare con OpenAI completo
 - ✅ Timeline con error boundary y skeleton loading
