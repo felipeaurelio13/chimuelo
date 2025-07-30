@@ -43,8 +43,8 @@
     "autoprefixer": "^10.4.16"
   },
   "buildInfo": {
-    "commitHash": "6f44746fb0677a1281bf6282b14ffb5c2ef35336",
-    "buildDate": "2025-07-30T02:13:00.355Z",
-    "branch": "cursor/actualizar-proyecto-e-implementar-control-de-versiones-y-ia-2bd2"
+    "commitHash": "0dce0206e7db2dc62c7e3731612e3c80ea760900",
+    "buildDate": "2025-07-30T03:59:46.869Z",
+    "branch": "cursor/implementar-conversaci-n-y-detecci-n-de-agentes-ea6e"
   }
 }

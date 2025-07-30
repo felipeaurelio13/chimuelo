@@ -8,6 +8,10 @@ import { contextAwareAICoordinator as contextAwareAI } from '../services/aiCoord
 import { type HealthRecord, type HealthStats } from '../services/databaseService';
 import { type ProcessingResult } from '../services/aiAgents';
 import AgentConversationViewer from '../components/AgentConversationViewer';
+import LegacyAgentConversationViewer from '../components/LegacyAgentConversationViewer';
+import MedicalIntegrationDialog from '../components/MedicalIntegrationDialog';
+import AgentConversationSystem, { ConversationSession } from '../services/agentConversationSystem';
+import MedicalRecordIntegrator, { IntegrationProposal } from '../services/medicalRecordIntegrator';
 import AppFooter from '../components/AppFooter';
 import ErrorHandler, { type ErrorInfo } from '../services/errorHandler';
 import '../styles/Capture.css';
@@ -82,6 +86,16 @@ const Capture: React.FC = () => {
   const [showClarificationDialog, setShowClarificationDialog] = useState(false);
   const [userResponses, setUserResponses] = useState<{[question: string]: string}>({});
   const [showAgentViewer, setShowAgentViewer] = useState(false);
+  
+  // New multi-agent conversation system
+  const [conversationSession, setConversationSession] = useState<ConversationSession | null>(null);
+  const [showConversationViewer, setShowConversationViewer] = useState(false);
+  const [isUsingNewSystem, setIsUsingNewSystem] = useState(true);
+  
+  // Medical record integration
+  const [integrationProposal, setIntegrationProposal] = useState<IntegrationProposal | null>(null);
+  const [showIntegrationDialog, setShowIntegrationDialog] = useState(false);
+  const [isIntegrating, setIsIntegrating] = useState(false);
   
   // File handling (deshabilitado por ahora)
   
@@ -316,7 +330,185 @@ const Capture: React.FC = () => {
             cleanInput.length >= 20);
   }, []);
 
-  // Process with multi-agent AI
+  // Process with NEW multi-agent conversation system
+  const processWithConversationSystem = useCallback(async () => {
+    console.log('🤖 Iniciando procesamiento con sistema de conversaciones multi-agente');
+    
+    if (!captureData.input.trim()) {
+      setProcessError('Por favor ingresa algún texto para el análisis');
+      return;
+    }
+
+    setIsProcessing(true);
+    setProcessError(null);
+    setConversationSession(null);
+    
+    try {
+      const conversationSystem = AgentConversationSystem.getInstance();
+      console.log('🚀 Iniciando conversación multi-agente...');
+      
+      const session = await conversationSystem.startConversation(
+        captureData.input,
+        'health_analysis',
+        user?.id // Incluir userId para contexto médico
+      );
+      
+      console.log('✅ Conversación completada:', session.id);
+      setConversationSession(session);
+      setShowConversationViewer(true);
+      
+      // Procesar resultado final si existe
+      if (session.finalResult) {
+        console.log('📊 Procesando resultado final de la conversación');
+        await processConversationResult(session);
+        
+        // Analizar para integración médica
+        await analyzeForMedicalIntegration(session);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error en conversación multi-agente:', error);
+      setProcessError(`Error en el análisis: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [captureData.input]);
+
+  // Process conversation result into health record
+  const processConversationResult = useCallback(async (session: ConversationSession) => {
+    if (!session.finalResult) return;
+    
+    try {
+      const finalResult = session.finalResult;
+      
+      // Extraer datos estructurados del resultado
+      const extractedData = finalResult.extractedData || {};
+      const recommendations = finalResult.recommendations || [];
+      
+      // Generar notas basadas en la conversación
+      const notes: string[] = [];
+      notes.push(`Análisis multi-agente completado (${session.messages.length} intercambios)`);
+      notes.push(`Confianza: ${(finalResult.confidence * 100).toFixed(0)}%`);
+      notes.push(`Seguridad: ${finalResult.safetyLevel}`);
+      
+      if (recommendations.length > 0) {
+        notes.push('\nRecomendaciones del equipo:');
+        recommendations.forEach((rec: string) => notes.push(`• ${rec}`));
+      }
+      
+      // Actualizar datos de captura
+      setCaptureData(prev => ({
+        ...prev,
+        extractedData: extractedData,
+        notes: notes.join('\n'),
+        confidence: finalResult.confidence,
+        autoTags: extractedData.autoTags || []
+      }));
+      
+      console.log('✅ Resultado de conversación procesado y aplicado');
+      
+    } catch (error) {
+      console.error('❌ Error procesando resultado de conversación:', error);
+    }
+  }, []);
+
+  // Analizar conversación para integración médica
+  const analyzeForMedicalIntegration = useCallback(async (session: ConversationSession) => {
+    if (!user?.id) {
+      console.warn('⚠️ No hay userId disponible para integración médica');
+      return;
+    }
+
+    try {
+      console.log('🔍 Analizando conversación para integración médica');
+      
+      const integrator = MedicalRecordIntegrator.getInstance();
+      
+      // Extraer datos médicos de la conversación
+      const extractedData = await integrator.analyzeConversationForMedicalData(session, user.id);
+      
+      // Verificar si hay datos relevantes para integrar
+      const hasRelevantData = 
+        Object.keys(extractedData.measurements).length > 0 ||
+        extractedData.symptoms.length > 0 ||
+        extractedData.milestones.length > 0 ||
+        extractedData.medications.length > 0;
+
+      if (!hasRelevantData) {
+        console.log('ℹ️ No se encontraron datos relevantes para integrar a la ficha médica');
+        return;
+      }
+
+      // Obtener contexto médico
+      const medicalContext = await integrator.getMedicalHistoryContext(user.id);
+      
+      // Crear propuesta de integración
+      const proposal = await integrator.createIntegrationProposal(
+        extractedData,
+        medicalContext,
+        user.id
+      );
+
+      console.log('✅ Propuesta de integración creada:', proposal.id);
+      setIntegrationProposal(proposal);
+      
+      // Mostrar el diálogo de integración automáticamente
+      setTimeout(() => {
+        setShowIntegrationDialog(true);
+      }, 1000); // Pequeño delay para mejor UX
+
+    } catch (error) {
+      console.error('❌ Error analizando para integración médica:', error);
+    }
+  }, [user?.id]);
+
+  // Confirmar integración a ficha médica
+  const handleIntegrationConfirm = useCallback(async (proposal: IntegrationProposal) => {
+    if (!user?.id) return;
+
+    setIsIntegrating(true);
+    
+    try {
+      console.log('💾 Aplicando integración a ficha médica');
+      
+      const integrator = MedicalRecordIntegrator.getInstance();
+      const success = await integrator.applyIntegration(proposal, user.id);
+      
+      if (success) {
+        console.log('🎉 Integración aplicada exitosamente');
+        
+        // Mostrar notificación de éxito
+        setProcessError('✅ Datos incorporados exitosamente a la ficha médica de Maxi');
+        
+        // Cerrar diálogo
+        setShowIntegrationDialog(false);
+        setIntegrationProposal(null);
+        
+        // Limpiar notificación después de 5 segundos
+        setTimeout(() => {
+          setProcessError(null);
+        }, 5000);
+        
+      } else {
+        setProcessError('❌ Error aplicando la integración. Inténtalo nuevamente.');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error en integración:', error);
+      setProcessError('❌ Error incorporando datos a la ficha médica');
+    } finally {
+      setIsIntegrating(false);
+    }
+  }, [user?.id]);
+
+  // Cancelar integración
+  const handleIntegrationCancel = useCallback(() => {
+    setShowIntegrationDialog(false);
+    setIntegrationProposal(null);
+    console.log('🚫 Integración cancelada por el usuario');
+  }, []);
+
+  // Process with multi-agent AI (legacy system)
   const processWithAI = useCallback(async () => {
     if (import.meta.env.VITE_DEV === 'TRUE') {
       console.log('Capture: Process with AI button clicked.');
@@ -820,20 +1012,42 @@ const Capture: React.FC = () => {
 
           {/* Process Button con diseño mejorado */}
           <div className="action-buttons elegant">
+            {/* Sistema Conversacional Multi-Agente (Nuevo) */}
             <button
               className={`process-button ${captureData.input.trim() ? 'ready' : ''} ${isProcessing ? 'processing' : ''}`}
-              onClick={processWithAI}
+              onClick={processWithConversationSystem}
               disabled={!captureData.input.trim() || isProcessing}
+              style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
             >
               {isProcessing ? (
                 <>
                   <span className="spinner"></span>
-                  <span>Analizando con múltiples agentes...</span>
+                  <span>🤖 Agentes conversando...</span>
+                </>
+              ) : (
+                <>
+                  <span className="button-icon">🤖</span>
+                  <span>Análisis Multi-Agente</span>
+                </>
+              )}
+            </button>
+            
+            {/* Sistema Clásico (Fallback) */}
+            <button
+              className={`process-button secondary ${captureData.input.trim() ? 'ready' : ''} ${isProcessing ? 'processing' : ''}`}
+              onClick={processWithAI}
+              disabled={!captureData.input.trim() || isProcessing}
+              style={{ background: 'linear-gradient(135deg, #64748b, #6b7280)', marginTop: '0.5rem' }}
+            >
+              {isProcessing ? (
+                <>
+                  <span className="spinner"></span>
+                  <span>Analizando con IA...</span>
                 </>
               ) : (
                 <>
                   <span className="button-icon">🧠</span>
-                  <span>Procesar con IA</span>
+                  <span>Sistema Clásico</span>
                 </>
               )}
             </button>
@@ -846,6 +1060,26 @@ const Capture: React.FC = () => {
               >
                 <span className="button-icon">🗑️</span>
                 <span>Limpiar</span>
+              </button>
+            )}
+            
+            {/* Botón para integrar manualmente si hay conversación completada */}
+            {conversationSession && conversationSession.finalResult && (
+              <button
+                className="secondary-button"
+                onClick={() => {
+                  if (integrationProposal) {
+                    setShowIntegrationDialog(true);
+                  } else {
+                    analyzeForMedicalIntegration(conversationSession);
+                  }
+                }}
+                type="button"
+                style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white' }}
+                disabled={isProcessing || isIntegrating}
+              >
+                <span className="button-icon">📋</span>
+                <span>Integrar a Ficha</span>
               </button>
             )}
           </div>
@@ -1145,14 +1379,31 @@ const Capture: React.FC = () => {
         )}
       </div>
 
-      {/* Agent Conversation Viewer */}
+      {/* New Multi-Agent Conversation Viewer */}
       <AgentConversationViewer
+        session={conversationSession}
+        isVisible={showConversationViewer}
+        onClose={() => setShowConversationViewer(false)}
+      />
+
+      {/* Legacy Agent Conversation Viewer */}
+      <LegacyAgentConversationViewer
         conversations={aiProcessingResult?.conversationLog}
         processingSteps={aiProcessingResult?.processingSteps}
         qualityMetrics={aiProcessingResult?.qualityMetrics}
         isVisible={showAgentViewer}
         onClose={() => setShowAgentViewer(false)}
       />
+
+      {/* Medical Integration Dialog */}
+      <MedicalIntegrationDialog
+        proposal={integrationProposal}
+        isVisible={showIntegrationDialog}
+        onConfirm={handleIntegrationConfirm}
+        onCancel={handleIntegrationCancel}
+        isProcessing={isIntegrating}
+      />
+
       <AppFooter />
     </div>
   );
