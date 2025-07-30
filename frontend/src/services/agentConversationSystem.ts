@@ -101,8 +101,8 @@ export class AgentConversationSystem {
     return AgentConversationSystem.instance;
   }
 
-  // Iniciar una nueva conversación multi-agente
-  async startConversation(input: string, topic: string = 'health_analysis'): Promise<ConversationSession> {
+  // Iniciar una nueva conversación multi-agente con contexto médico
+  async startConversation(input: string, topic: string = 'health_analysis', userId?: string): Promise<ConversationSession> {
     const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     console.log(`🚀 Iniciando conversación multi-agente: ${sessionId}`);
@@ -121,6 +121,22 @@ export class AgentConversationSystem {
     this.currentSessions.set(sessionId, session);
 
     try {
+      // Obtener contexto médico si se proporciona userId
+      let medicalContext = null;
+      if (userId) {
+        try {
+          const MedicalRecordIntegrator = (await import('./medicalRecordIntegrator')).default;
+          const integrator = MedicalRecordIntegrator.getInstance();
+          medicalContext = await integrator.getMedicalHistoryContext(userId);
+          console.log(`📋 Contexto médico obtenido para usuario ${userId}`);
+        } catch (error) {
+          console.warn('⚠️ No se pudo obtener contexto médico:', error);
+        }
+      }
+
+      // Agregar contexto médico a la sesión
+      (session as any).medicalContext = medicalContext;
+      
       // Fase 1: Clasificación inicial
       await this.runClassificationPhase(session);
       
@@ -213,7 +229,7 @@ export class AgentConversationSystem {
   // Análisis médico
   private async runMedicalAnalysis(session: ConversationSession): Promise<void> {
     try {
-      const medicalPrompt = this.buildMedicalAnalysisPrompt(session.input, session.messages);
+      const medicalPrompt = this.buildMedicalAnalysisPrompt(session.input, session.messages, session);
       const response = await openaiService.chatCompletion([
         { role: 'system', content: medicalPrompt.system },
         { role: 'user', content: medicalPrompt.user }
@@ -422,9 +438,29 @@ Responde SOLO en JSON válido con: classification, urgency, confidence (0-1), re
     };
   }
 
-  private buildMedicalAnalysisPrompt(input: string, conversationHistory: ConversationMessage[]) {
+  private buildMedicalAnalysisPrompt(input: string, conversationHistory: ConversationMessage[], session?: ConversationSession) {
     const context = conversationHistory.map(m => `${m.from}: ${m.content}`).join('\n');
     
+    // Incluir contexto médico si está disponible
+    let medicalContextText = '';
+    if ((session as any)?.medicalContext) {
+      const medContext = (session as any).medicalContext;
+      medicalContextText = `
+
+HISTORIAL MÉDICO CONTEXTUAL:
+- Registros recientes: ${medContext.recordCount} en últimos 30 días
+- Peso actual: ${medContext.currentStats?.currentWeight || 'No registrado'} kg
+- Altura actual: ${medContext.currentStats?.currentHeight || 'No registrado'} cm
+- Tendencias observadas: ${medContext.trends?.join(', ') || 'Sin datos suficientes'}
+- Última actualización: ${medContext.lastUpdate ? new Date(medContext.lastUpdate).toLocaleDateString() : 'N/A'}
+
+IMPORTANTE: Analiza el nuevo input en PERSPECTIVA con este historial. Identifica:
+- Cambios significativos respecto a mediciones anteriores
+- Patrones o tendencias que continúan o se rompen
+- Correlaciones con registros previos
+- Necesidad de seguimiento basado en historial`;
+    }
+
     return {
       system: `Eres el Agente Médico Especializado del equipo Chimuelo. Analizas contenido médico pediátrico con expertise clínico.
 
@@ -433,6 +469,7 @@ ESPECIALIZACIÓN:
 - Reconocimiento de síntomas
 - Evaluación de urgencia médica
 - Identificación de patrones
+- Análisis comparativo con historial
 
 RESTRICCIONES CRÍTICAS:
 - NUNCA diagnosticar enfermedades
@@ -441,7 +478,7 @@ RESTRICCIONES CRÍTICAS:
 - Ser conservador en evaluaciones
 
 CONTEXTO DE LA CONVERSACIÓN:
-${context}
+${context}${medicalContextText}
 
 Analiza síntomas, signos vitales, comportamientos y proporciona:
 - symptoms: Array de síntomas identificados
@@ -450,9 +487,11 @@ Analiza síntomas, signos vitales, comportamientos y proporciona:
 - alerts: Alertas médicas si detectas algo preocupante
 - recommendations: Recomendaciones seguras
 - confidence: Tu nivel de confianza (0-1)
+- historicalComparison: Comparación con registros previos si aplica
+- followUpNeeded: Si requiere seguimiento basado en historial
 
 Responde SOLO en JSON válido.`,
-      user: `Analiza médicamente: "${input}"`
+      user: `Analiza médicamente en perspectiva: "${input}"`
     };
   }
 

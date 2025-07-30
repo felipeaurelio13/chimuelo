@@ -43,8 +43,8 @@
     "autoprefixer": "^10.4.16"
   },
   "buildInfo": {
-    "commitHash": "a40181af3e8c772ddf8981015abd1e1a05d930c3",
-    "buildDate": "2025-07-30T03:46:59.583Z",
+    "commitHash": "0dce0206e7db2dc62c7e3731612e3c80ea760900",
+    "buildDate": "2025-07-30T03:59:46.869Z",
     "branch": "cursor/implementar-conversaci-n-y-detecci-n-de-agentes-ea6e"
   }
 }

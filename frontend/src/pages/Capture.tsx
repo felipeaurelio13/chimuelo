@@ -9,7 +9,9 @@ import { type HealthRecord, type HealthStats } from '../services/databaseService
 import { type ProcessingResult } from '../services/aiAgents';
 import AgentConversationViewer from '../components/AgentConversationViewer';
 import LegacyAgentConversationViewer from '../components/LegacyAgentConversationViewer';
+import MedicalIntegrationDialog from '../components/MedicalIntegrationDialog';
 import AgentConversationSystem, { ConversationSession } from '../services/agentConversationSystem';
+import MedicalRecordIntegrator, { IntegrationProposal } from '../services/medicalRecordIntegrator';
 import AppFooter from '../components/AppFooter';
 import ErrorHandler, { type ErrorInfo } from '../services/errorHandler';
 import '../styles/Capture.css';
@@ -89,6 +91,11 @@ const Capture: React.FC = () => {
   const [conversationSession, setConversationSession] = useState<ConversationSession | null>(null);
   const [showConversationViewer, setShowConversationViewer] = useState(false);
   const [isUsingNewSystem, setIsUsingNewSystem] = useState(true);
+  
+  // Medical record integration
+  const [integrationProposal, setIntegrationProposal] = useState<IntegrationProposal | null>(null);
+  const [showIntegrationDialog, setShowIntegrationDialog] = useState(false);
+  const [isIntegrating, setIsIntegrating] = useState(false);
   
   // File handling (deshabilitado por ahora)
   
@@ -342,7 +349,8 @@ const Capture: React.FC = () => {
       
       const session = await conversationSystem.startConversation(
         captureData.input,
-        'health_analysis'
+        'health_analysis',
+        user?.id // Incluir userId para contexto médico
       );
       
       console.log('✅ Conversación completada:', session.id);
@@ -353,6 +361,9 @@ const Capture: React.FC = () => {
       if (session.finalResult) {
         console.log('📊 Procesando resultado final de la conversación');
         await processConversationResult(session);
+        
+        // Analizar para integración médica
+        await analyzeForMedicalIntegration(session);
       }
       
     } catch (error) {
@@ -399,6 +410,102 @@ const Capture: React.FC = () => {
     } catch (error) {
       console.error('❌ Error procesando resultado de conversación:', error);
     }
+  }, []);
+
+  // Analizar conversación para integración médica
+  const analyzeForMedicalIntegration = useCallback(async (session: ConversationSession) => {
+    if (!user?.id) {
+      console.warn('⚠️ No hay userId disponible para integración médica');
+      return;
+    }
+
+    try {
+      console.log('🔍 Analizando conversación para integración médica');
+      
+      const integrator = MedicalRecordIntegrator.getInstance();
+      
+      // Extraer datos médicos de la conversación
+      const extractedData = await integrator.analyzeConversationForMedicalData(session, user.id);
+      
+      // Verificar si hay datos relevantes para integrar
+      const hasRelevantData = 
+        Object.keys(extractedData.measurements).length > 0 ||
+        extractedData.symptoms.length > 0 ||
+        extractedData.milestones.length > 0 ||
+        extractedData.medications.length > 0;
+
+      if (!hasRelevantData) {
+        console.log('ℹ️ No se encontraron datos relevantes para integrar a la ficha médica');
+        return;
+      }
+
+      // Obtener contexto médico
+      const medicalContext = await integrator.getMedicalHistoryContext(user.id);
+      
+      // Crear propuesta de integración
+      const proposal = await integrator.createIntegrationProposal(
+        extractedData,
+        medicalContext,
+        user.id
+      );
+
+      console.log('✅ Propuesta de integración creada:', proposal.id);
+      setIntegrationProposal(proposal);
+      
+      // Mostrar el diálogo de integración automáticamente
+      setTimeout(() => {
+        setShowIntegrationDialog(true);
+      }, 1000); // Pequeño delay para mejor UX
+
+    } catch (error) {
+      console.error('❌ Error analizando para integración médica:', error);
+    }
+  }, [user?.id]);
+
+  // Confirmar integración a ficha médica
+  const handleIntegrationConfirm = useCallback(async (proposal: IntegrationProposal) => {
+    if (!user?.id) return;
+
+    setIsIntegrating(true);
+    
+    try {
+      console.log('💾 Aplicando integración a ficha médica');
+      
+      const integrator = MedicalRecordIntegrator.getInstance();
+      const success = await integrator.applyIntegration(proposal, user.id);
+      
+      if (success) {
+        console.log('🎉 Integración aplicada exitosamente');
+        
+        // Mostrar notificación de éxito
+        setProcessError('✅ Datos incorporados exitosamente a la ficha médica de Maxi');
+        
+        // Cerrar diálogo
+        setShowIntegrationDialog(false);
+        setIntegrationProposal(null);
+        
+        // Limpiar notificación después de 5 segundos
+        setTimeout(() => {
+          setProcessError(null);
+        }, 5000);
+        
+      } else {
+        setProcessError('❌ Error aplicando la integración. Inténtalo nuevamente.');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error en integración:', error);
+      setProcessError('❌ Error incorporando datos a la ficha médica');
+    } finally {
+      setIsIntegrating(false);
+    }
+  }, [user?.id]);
+
+  // Cancelar integración
+  const handleIntegrationCancel = useCallback(() => {
+    setShowIntegrationDialog(false);
+    setIntegrationProposal(null);
+    console.log('🚫 Integración cancelada por el usuario');
   }, []);
 
   // Process with multi-agent AI (legacy system)
@@ -955,6 +1062,26 @@ const Capture: React.FC = () => {
                 <span>Limpiar</span>
               </button>
             )}
+            
+            {/* Botón para integrar manualmente si hay conversación completada */}
+            {conversationSession && conversationSession.finalResult && (
+              <button
+                className="secondary-button"
+                onClick={() => {
+                  if (integrationProposal) {
+                    setShowIntegrationDialog(true);
+                  } else {
+                    analyzeForMedicalIntegration(conversationSession);
+                  }
+                }}
+                type="button"
+                style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white' }}
+                disabled={isProcessing || isIntegrating}
+              >
+                <span className="button-icon">📋</span>
+                <span>Integrar a Ficha</span>
+              </button>
+            )}
           </div>
 
           {/* Error Message */}
@@ -1267,6 +1394,16 @@ const Capture: React.FC = () => {
         isVisible={showAgentViewer}
         onClose={() => setShowAgentViewer(false)}
       />
+
+      {/* Medical Integration Dialog */}
+      <MedicalIntegrationDialog
+        proposal={integrationProposal}
+        isVisible={showIntegrationDialog}
+        onConfirm={handleIntegrationConfirm}
+        onCancel={handleIntegrationCancel}
+        isProcessing={isIntegrating}
+      />
+
       <AppFooter />
     </div>
   );
