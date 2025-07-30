@@ -8,6 +8,8 @@ import { contextAwareAICoordinator as contextAwareAI } from '../services/aiCoord
 import { type HealthRecord, type HealthStats } from '../services/databaseService';
 import { type ProcessingResult } from '../services/aiAgents';
 import AgentConversationViewer from '../components/AgentConversationViewer';
+import LegacyAgentConversationViewer from '../components/LegacyAgentConversationViewer';
+import AgentConversationSystem, { ConversationSession } from '../services/agentConversationSystem';
 import AppFooter from '../components/AppFooter';
 import ErrorHandler, { type ErrorInfo } from '../services/errorHandler';
 import '../styles/Capture.css';
@@ -82,6 +84,11 @@ const Capture: React.FC = () => {
   const [showClarificationDialog, setShowClarificationDialog] = useState(false);
   const [userResponses, setUserResponses] = useState<{[question: string]: string}>({});
   const [showAgentViewer, setShowAgentViewer] = useState(false);
+  
+  // New multi-agent conversation system
+  const [conversationSession, setConversationSession] = useState<ConversationSession | null>(null);
+  const [showConversationViewer, setShowConversationViewer] = useState(false);
+  const [isUsingNewSystem, setIsUsingNewSystem] = useState(true);
   
   // File handling (deshabilitado por ahora)
   
@@ -316,7 +323,85 @@ const Capture: React.FC = () => {
             cleanInput.length >= 20);
   }, []);
 
-  // Process with multi-agent AI
+  // Process with NEW multi-agent conversation system
+  const processWithConversationSystem = useCallback(async () => {
+    console.log('🤖 Iniciando procesamiento con sistema de conversaciones multi-agente');
+    
+    if (!captureData.input.trim()) {
+      setProcessError('Por favor ingresa algún texto para el análisis');
+      return;
+    }
+
+    setIsProcessing(true);
+    setProcessError(null);
+    setConversationSession(null);
+    
+    try {
+      const conversationSystem = AgentConversationSystem.getInstance();
+      console.log('🚀 Iniciando conversación multi-agente...');
+      
+      const session = await conversationSystem.startConversation(
+        captureData.input,
+        'health_analysis'
+      );
+      
+      console.log('✅ Conversación completada:', session.id);
+      setConversationSession(session);
+      setShowConversationViewer(true);
+      
+      // Procesar resultado final si existe
+      if (session.finalResult) {
+        console.log('📊 Procesando resultado final de la conversación');
+        await processConversationResult(session);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error en conversación multi-agente:', error);
+      setProcessError(`Error en el análisis: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [captureData.input]);
+
+  // Process conversation result into health record
+  const processConversationResult = useCallback(async (session: ConversationSession) => {
+    if (!session.finalResult) return;
+    
+    try {
+      const finalResult = session.finalResult;
+      
+      // Extraer datos estructurados del resultado
+      const extractedData = finalResult.extractedData || {};
+      const recommendations = finalResult.recommendations || [];
+      
+      // Generar notas basadas en la conversación
+      const notes: string[] = [];
+      notes.push(`Análisis multi-agente completado (${session.messages.length} intercambios)`);
+      notes.push(`Confianza: ${(finalResult.confidence * 100).toFixed(0)}%`);
+      notes.push(`Seguridad: ${finalResult.safetyLevel}`);
+      
+      if (recommendations.length > 0) {
+        notes.push('\nRecomendaciones del equipo:');
+        recommendations.forEach((rec: string) => notes.push(`• ${rec}`));
+      }
+      
+      // Actualizar datos de captura
+      setCaptureData(prev => ({
+        ...prev,
+        extractedData: extractedData,
+        notes: notes.join('\n'),
+        confidence: finalResult.confidence,
+        autoTags: extractedData.autoTags || []
+      }));
+      
+      console.log('✅ Resultado de conversación procesado y aplicado');
+      
+    } catch (error) {
+      console.error('❌ Error procesando resultado de conversación:', error);
+    }
+  }, []);
+
+  // Process with multi-agent AI (legacy system)
   const processWithAI = useCallback(async () => {
     if (import.meta.env.VITE_DEV === 'TRUE') {
       console.log('Capture: Process with AI button clicked.');
@@ -820,20 +905,42 @@ const Capture: React.FC = () => {
 
           {/* Process Button con diseño mejorado */}
           <div className="action-buttons elegant">
+            {/* Sistema Conversacional Multi-Agente (Nuevo) */}
             <button
               className={`process-button ${captureData.input.trim() ? 'ready' : ''} ${isProcessing ? 'processing' : ''}`}
-              onClick={processWithAI}
+              onClick={processWithConversationSystem}
               disabled={!captureData.input.trim() || isProcessing}
+              style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
             >
               {isProcessing ? (
                 <>
                   <span className="spinner"></span>
-                  <span>Analizando con múltiples agentes...</span>
+                  <span>🤖 Agentes conversando...</span>
+                </>
+              ) : (
+                <>
+                  <span className="button-icon">🤖</span>
+                  <span>Análisis Multi-Agente</span>
+                </>
+              )}
+            </button>
+            
+            {/* Sistema Clásico (Fallback) */}
+            <button
+              className={`process-button secondary ${captureData.input.trim() ? 'ready' : ''} ${isProcessing ? 'processing' : ''}`}
+              onClick={processWithAI}
+              disabled={!captureData.input.trim() || isProcessing}
+              style={{ background: 'linear-gradient(135deg, #64748b, #6b7280)', marginTop: '0.5rem' }}
+            >
+              {isProcessing ? (
+                <>
+                  <span className="spinner"></span>
+                  <span>Analizando con IA...</span>
                 </>
               ) : (
                 <>
                   <span className="button-icon">🧠</span>
-                  <span>Procesar con IA</span>
+                  <span>Sistema Clásico</span>
                 </>
               )}
             </button>
@@ -1145,8 +1252,15 @@ const Capture: React.FC = () => {
         )}
       </div>
 
-      {/* Agent Conversation Viewer */}
+      {/* New Multi-Agent Conversation Viewer */}
       <AgentConversationViewer
+        session={conversationSession}
+        isVisible={showConversationViewer}
+        onClose={() => setShowConversationViewer(false)}
+      />
+
+      {/* Legacy Agent Conversation Viewer */}
+      <LegacyAgentConversationViewer
         conversations={aiProcessingResult?.conversationLog}
         processingSteps={aiProcessingResult?.processingSteps}
         qualityMetrics={aiProcessingResult?.qualityMetrics}
