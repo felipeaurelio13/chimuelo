@@ -324,16 +324,29 @@ export class ContextAwareAICoordinator {
     } catch (error) {
       console.error('❌ Error en OpenAI processing:', error);
       console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-      
+
       // Crear error info específico para OpenAI
-      const errorInfo = ErrorHandler.createAIError(error, { 
-        enrichedInput, 
+      const errorInfo = ErrorHandler.createAIError(error, {
+        enrichedInput,
         userContext,
         source: 'openai'
       });
       ErrorHandler.getInstance().logError(errorInfo);
-      
-      // Retornar fallback con información del error
+
+      // Intentar procesar localmente con el sistema multi-agente
+      try {
+        console.log('🔧 [DEBUG] Falling back to local multi-agent processing...');
+        const localResult = await this.processWithMultiAgents(enrichedInput, userContext);
+        return {
+          ...localResult,
+          notes: `${localResult.notes} (OpenAI error: ${errorInfo.userMessage})`,
+          error: errorInfo
+        };
+      } catch (localError) {
+        console.error('❌ Error en fallback multi-agente:', localError);
+      }
+
+      // Retornar fallback simple si todo falla
       const fallbackResult = {
         type: 'note',
         data: {
@@ -352,7 +365,7 @@ export class ContextAwareAICoordinator {
         },
         error: errorInfo
       };
-      
+
       console.log('🔧 [DEBUG] Fallback result para OpenAI:', fallbackResult);
       return fallbackResult;
     }
@@ -362,46 +375,37 @@ export class ContextAwareAICoordinator {
   private async processWithMultiAgents(enrichedInput: string, userContext: ContextualInput): Promise<any> {
     console.log('🔧 [DEBUG] processWithMultiAgents iniciando...');
     console.log('🔧 [DEBUG] EnrichedInput:', enrichedInput);
-    
+
     try {
-      const agentInput = {
-        id: `input_${Date.now()}`,
-        type: 'text' as const,
-        content: enrichedInput,
-        timestamp: new Date(),
-        userId: 'current_user',
-        context: userContext
-      };
+      console.log('🔧 [DEBUG] Llamando a AIProcessingCoordinatorV2.processInput...');
+      const result = await this.coordinator.processInput(enrichedInput);
+      console.log('🔧 [DEBUG] Resultado de AIProcessingCoordinatorV2:', result);
 
-      console.log('🔧 [DEBUG] AgentInput creado:', {
-        id: agentInput.id,
-        type: agentInput.type,
-        contentLength: agentInput.content.length,
-        contextKeys: Object.keys(agentInput.context || {})
-      });
+      const primaryType = result.finalData?.primaryType || 'note';
+      const mainData = (result.finalData && result.finalData[primaryType]) || {};
 
-      console.log('🔧 [DEBUG] Llamando a multiAgentCoordinator.processInput...');
-      const result = await this.multiAgentCoordinator.processInput(agentInput);
-      console.log('🔧 [DEBUG] Resultado de multiAgentCoordinator:', result);
-      
       const processedResult = {
-        type: result.classification,
+        type: primaryType,
         data: {
-          value: result.extractedData,
-          unit: this.determineUnit(result.classification),
-          date: new Date().toISOString(),
+          value: mainData.value ?? enrichedInput,
+          unit: mainData.unit || this.determineUnit(primaryType),
+          date: mainData.date || new Date().toISOString(),
           context: enrichedInput
         },
         confidence: result.confidence,
-        requiresAttention: result.extractedData.requiresAttention || false,
-        notes: result.recommendations.join('; '),
+        requiresAttention: result.finalData?.urgentSymptoms || false,
+        notes: result.suggestions?.join('; ') || '',
+        agentResponses: result.agentResponses,
+        conversationLog: result.conversationLog,
+        processingSteps: result.processingSteps,
+        qualityMetrics: result.qualityMetrics,
         validation: {
           isValid: result.confidence > 0.5,
           warnings: result.confidence < 0.8 ? ['Confianza baja en extracción'] : [],
           errors: []
         }
       };
-      
+
       console.log('🔧 [DEBUG] Resultado procesado:', processedResult);
       return processedResult;
       
