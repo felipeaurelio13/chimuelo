@@ -1250,7 +1250,7 @@ const Capture: React.FC = () => {
             )}
 
             {/* AI Agents Analysis Summary */}
-            {aiProcessingResult && (
+            {aiProcessingResult && aiProcessingResult.agentResponses?.length > 0 && (
               <div className="ai-analysis-summary">
                 <h4>🤖 Análisis Multi-Agente</h4>
                 <div className="agents-grid">
@@ -1286,7 +1286,13 @@ const Capture: React.FC = () => {
                   <p className="consensus-status success">✅ Los agentes llegaron a un consenso</p>
                 ) : (
                   <p className="consensus-status warning">⚠️ Los agentes tienen opiniones diferentes</p>
-                )}
+              )}
+            </div>
+            )}
+            {aiProcessingResult && !aiProcessingResult.agentResponses?.length && (
+              <div className="ai-analysis-summary">
+                <h4>🤖 Análisis Multi-Agente</h4>
+                <p>No se recibieron respuestas de los agentes.</p>
               </div>
             )}
 
