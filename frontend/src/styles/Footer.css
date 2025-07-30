@@ -1,0 +1,167 @@
+/* Footer Styles */
+.app-footer {
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-light);
+  padding: var(--space-4) 0;
+  margin-top: auto;
+  position: relative;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+}
+
+.footer-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.app-name {
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.footer-separator {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.footer-love {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+/* Version Component Styles */
+.app-version {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  cursor: default;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.app-version:hover {
+  color: var(--text-secondary);
+}
+
+.version-label {
+  font-weight: var(--font-weight-medium);
+  opacity: 0.8;
+}
+
+.version-number {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Version Tooltip */
+.version-tooltip-container {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: var(--space-2);
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+}
+
+.app-version:hover .version-tooltip-container {
+  opacity: 1;
+  visibility: visible;
+}
+
+.version-tooltip {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-lg);
+  min-width: 200px;
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.version-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--bg-surface-elevated);
+}
+
+.version-tooltip div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-1);
+}
+
+.version-tooltip div:last-child {
+  margin-bottom: 0;
+}
+
+.version-tooltip strong {
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+/* Responsive Footer */
+@media (max-width: 640px) {
+  .footer-content {
+    flex-direction: column;
+    gap: var(--space-3);
+    text-align: center;
+  }
+  
+  .footer-info {
+    justify-content: center;
+  }
+  
+  .version-tooltip {
+    min-width: 180px;
+    font-size: var(--font-size-xs);
+  }
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .version-tooltip {
+  background: var(--bg-surface-elevated);
+  border-color: var(--border-primary);
+}
+
+[data-theme="dark"] .version-tooltip::after {
+  border-top-color: var(--bg-surface-elevated);
+}
+
+/* Animation for version tooltip */
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.version-tooltip-container {
+  animation: tooltipFadeIn 0.2s ease-out;
+}

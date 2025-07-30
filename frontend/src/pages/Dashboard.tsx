@@ -6,6 +6,7 @@ import { dataIntegrityService } from '../services/dataIntegrityService';
 import AppFooter from '../components/AppFooter';
 import MultiAgentSystemViewer from '../components/MultiAgentSystemViewer';
 import DataStorageInfo from '../components/DataStorageInfo';
+import TextProcessingModal from '../components/TextProcessingModal';
 
 const getActivityIcon = (type: string): string => {
   const iconMap: Record<string, string> = {
@@ -41,6 +42,7 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [babyAge, setBabyAge] = useState<string>('');
   const [showMultiAgentViewer, setShowMultiAgentViewer] = useState(false);
+  const [showTextProcessingModal, setShowTextProcessingModal] = useState(false);
 
   useEffect(() => {
     // Get baby's age from data integrity service
@@ -63,6 +65,14 @@ const Dashboard: React.FC = () => {
       subtitle: 'Ver perfil completo',
       color: 'var(--primary-warm)',
       action: () => navigate('/medical-file')
+    },
+    {
+      id: 'text-processing',
+      icon: '🔤',
+      title: 'Procesar Texto',
+      subtitle: 'IA simple',
+      color: 'var(--info)',
+      action: () => setShowTextProcessingModal(true)
     },
     {
       id: 'chat',
@@ -241,6 +251,16 @@ const Dashboard: React.FC = () => {
        <MultiAgentSystemViewer 
          isOpen={showMultiAgentViewer} 
          onClose={() => setShowMultiAgentViewer(false)} 
+       />
+
+       {/* Text Processing Modal */}
+       <TextProcessingModal
+         isOpen={showTextProcessingModal}
+         onClose={() => setShowTextProcessingModal(false)}
+         onProcessed={(result) => {
+           console.log('Text processing result:', result);
+           // Aquí podrías agregar lógica para manejar el resultado
+         }}
        />
      </div>
    );

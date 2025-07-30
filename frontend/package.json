@@ -5,12 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node scripts/version.js all && tsc -b && vite build",
+    "build:dev": "tsc -b && vite build",
     "lint": "eslint . --max-warnings 0",
     "preview": "vite preview",
     "version:patch": "npm version patch --no-git-tag-version",
     "version:minor": "npm version minor --no-git-tag-version",
     "version:major": "npm version major --no-git-tag-version",
+    "version:info": "node scripts/version.js all",
     "postinstall": "node scripts/setup-rollup-wasm.cjs"
   },
   "dependencies": {
@@ -39,5 +41,10 @@
     "tailwindcss": "^3.4.4",
     "postcss": "^8.4.32",
     "autoprefixer": "^10.4.16"
+  },
+  "buildInfo": {
+    "commitHash": "6f44746fb0677a1281bf6282b14ffb5c2ef35336",
+    "buildDate": "2025-07-30T02:13:00.355Z",
+    "branch": "cursor/actualizar-proyecto-e-implementar-control-de-versiones-y-ia-2bd2"
   }
 }
