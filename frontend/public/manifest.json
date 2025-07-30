@@ -2,7 +2,7 @@
   "name": "Chimuelo Health Tracker",
   "short_name": "Chimuelo",
   "description": "Aplicación inteligente para el seguimiento de la salud de tu bebé con IA avanzada",
-  "version": "2.5.6",
+  "version": "2.5.7",
   "start_url": "/chimuelo/",
   "scope": "/chimuelo/",
   "display": "standalone",
