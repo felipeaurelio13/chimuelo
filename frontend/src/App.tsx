@@ -14,6 +14,7 @@ import MedicalFile from './pages/MedicalFile';
 import Chat from './pages/Chat';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
+import './styles/tailwind.css';
 import './App.css';
 import './styles/themes.css';
 import './styles/ErrorBoundary.css';

@@ -3,7 +3,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
 import AppFooter from '../components/AppFooter';
-import '../styles/Auth.css';
 
 const Login: React.FC = () => {
   if (import.meta.env.VITE_DEV === 'TRUE') {
@@ -117,77 +116,33 @@ const Login: React.FC = () => {
   const isFormValid = formData.email && formData.password.length >= 6;
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <div className="auth-header">
-                <div className="auth-logo">
-        <Logo size="large" variant="animated" />
-        <h1 className="logo-title">Chimuelo</h1>
-      </div>
-          <p className="auth-subtitle">Inicia sesión en tu cuenta</p>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-zinc-900 p-4">
+      <div className="w-full max-w-sm bg-white dark:bg-zinc-800 rounded-2xl shadow-lg p-6">
+        <div className="flex flex-col items-center gap-2 mb-6">
+          <Logo size="large" variant="animated" />
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Chimuelo</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Inicia sesión en tu cuenta</p>
         </div>
-
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="email" className="form-label">
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="form-input"
-              placeholder="tu@email.com"
-              required
-              autoComplete="email"
-              autoFocus
-            />
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          <div className="space-y-2">
+            <label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+            <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 p-3" placeholder="tu@email.com" required autoComplete="email" autoFocus />
           </div>
-
-          <div className="form-group">
-            <label htmlFor="password" className="form-label">
-              Contraseña
-            </label>
-            <div className="password-input-container">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className="form-input"
-                placeholder="Min. 6 caracteres"
-                required
-                autoComplete="current-password"
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-              >
-                {showPassword ? '🙈' : '👁️'}
-              </button>
+          <div className="space-y-2">
+            <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">Contraseña</label>
+            <div className="relative">
+              <input type={showPassword ? 'text' : 'password'} id="password" name="password" value={formData.password} onChange={handleChange} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 p-3 pr-10" placeholder="Min. 6 caracteres" required autoComplete="current-password" />
+              <button type="button" className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 dark:text-gray-400" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>{showPassword ? '🙈' : '👁️'}</button>
             </div>
           </div>
-
-          {error && <p className="auth-error-message">{error}</p>}
-
-          <button type="submit" className="auth-button" disabled={!isFormValid || isLoading}>
-            {isLoading ? 'Iniciando sesión...' : 'Iniciar sesión'}
-          </button>
-
-          <p className="auth-footer">
-            ¿No tienes una cuenta? <a href="/register">Regístrate aquí</a>
-          </p>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <button type="submit" className="w-full rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white py-3 font-semibold disabled:opacity-50" disabled={!isFormValid || isLoading}>{isLoading ? 'Iniciando sesión...' : 'Iniciar sesión'}</button>
+          <p className="text-center text-sm text-gray-500 dark:text-gray-400">¿No tienes una cuenta?{' '}<a className="text-indigo-600 hover:text-indigo-700" href="/register">Regístrate aquí</a></p>
         </form>
       </div>
-      <AppFooter />
+      <AppFooter className="mt-6" />
     </div>
   );
 };
 
 export default Login;
-export { Login };
