@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "2.5.7",
+  "version": "2.5.8",
   "private": true,
   "type": "module",
   "scripts": {
@@ -35,6 +35,9 @@
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.35.1",
     "vite": "^7.0.4",
-    "@rollup/wasm-node": "^4.46.1"
+    "@rollup/wasm-node": "^4.46.1",
+    "tailwindcss": "^3.4.4",
+    "postcss": "^8.4.32",
+    "autoprefixer": "^10.4.16"
   }
 }
