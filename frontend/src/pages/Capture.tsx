@@ -75,7 +75,6 @@ const Capture: React.FC = () => {
   const [validation, setValidation] = useState<ValidationResult>({ isValid: true, errors: [], warnings: [] });
   const [showPreview, setShowPreview] = useState(false);
   const [processError, setProcessError] = useState<string | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [customDate, setCustomDate] = useState<string>('');
   
   // Multi-agent AI state
@@ -84,16 +83,7 @@ const Capture: React.FC = () => {
   const [userResponses, setUserResponses] = useState<{[question: string]: string}>({});
   const [showAgentViewer, setShowAgentViewer] = useState(false);
   
-  // Voice recording state
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // File handling
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const galleryInputRef = useRef<HTMLInputElement>(null);
+  // File handling (deshabilitado por ahora)
   
   // Smart suggestions
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -315,155 +305,7 @@ const Capture: React.FC = () => {
     console.log('🔧 [DEBUG] Capture: Extracted data set and validated.', extractedData, validationResult);
   }, [generateNotes, validateExtractedData, captureData.input]);
 
-  // Handle file upload
-  const handleFileUpload = useCallback((file: File) => {
-    if (import.meta.env.VITE_DEV === 'TRUE') {
-      console.log('Capture: File selected for upload:', file.name, file.type);
-    }
-    
-    if (file.type.startsWith('image/')) {
-      // Para imágenes, crear preview y placeholder
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-        if (import.meta.env.VITE_DEV === 'TRUE') {
-          console.log('Capture: Image preview generated.');
-        }
-      };
-      reader.readAsDataURL(file);
-      
-      setCaptureData({
-        input: `[Imagen adjunta: ${file.name}] Por favor describe el contenido de esta imagen médica.`,
-        inputType: 'image',
-        file,
-        metadata: {
-          timestamp: new Date(),
-          context: `Imagen: ${file.name}`,
-          fileType: 'image',
-          fileName: file.name
-        }
-      });
-    } else if (file.type === 'application/pdf') {
-      // Para PDFs, indicar que es un documento
-      setCaptureData({
-        input: `[PDF adjunto: ${file.name}] Por favor describe el contenido de este documento médico.`,
-        inputType: 'pdf',
-        file,
-        metadata: {
-          timestamp: new Date(),
-          context: `PDF: ${file.name}`,
-          fileType: 'pdf',
-          fileName: file.name
-        }
-      });
-      
-      // Mostrar mensaje informativo
-      setProcessError('ℹ️ PDF detectado. Por favor describe brevemente qué tipo de documento es (ej: "análisis de sangre", "receta médica", etc.)');
-      if (import.meta.env.VITE_DEV === 'TRUE') {
-        console.log('Capture: PDF file selected.', file.name);
-      }
-    } else if (file.type.startsWith('audio/')) {
-      // Para audio
-      setCaptureData({
-        input: `[Audio adjunto: ${file.name}]`,
-        inputType: 'audio',
-        file,
-        metadata: {
-          timestamp: new Date(),
-          context: `Audio: ${file.name}`,
-          fileType: 'audio',
-          fileName: file.name
-        }
-      });
-      if (import.meta.env.VITE_DEV === 'TRUE') {
-        console.log('Capture: Audio file selected.', file.name);
-      }
-    } else {
-      // Para archivos de texto, leer el contenido
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result as string;
-        setCaptureData({
-          input: content,
-          inputType: 'text',
-          file,
-          metadata: {
-            timestamp: new Date(),
-            context: `Archivo: ${file.name}`,
-            fileType: 'text',
-            fileName: file.name
-          }
-        });
-        if (import.meta.env.VITE_DEV === 'TRUE') {
-          console.log('Capture: Text file content loaded.', content.substring(0, 50), '...');
-        }
-      };
-      reader.readAsText(file);
-    }
-  }, []);
 
-  // Voice recording functions
-  const startRecording = useCallback(async () => {
-    if (import.meta.env.VITE_DEV === 'TRUE') {
-      console.log('Capture: Starting recording...');
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      
-      const chunks: Blob[] = [];
-      
-      mediaRecorder.ondataavailable = (e) => {
-        chunks.push(e.data);
-      };
-      
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/wav' });
-        const file = new File([blob], `recording-${Date.now()}.wav`, { type: 'audio/wav' });
-        handleFileUpload(file);
-        if (import.meta.env.VITE_DEV === 'TRUE') {
-          console.log('Capture: Recording stopped, file generated.', file.name);
-        }
-        
-        // Clean up
-        stream.getTracks().forEach(track => track.stop());
-      };
-      
-      mediaRecorder.start();
-      setIsRecording(true);
-      setRecordingTime(0);
-      
-      recordingIntervalRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-      
-    } catch (error: unknown) {
-      if (import.meta.env.VITE_DEV === 'TRUE') {
-        if (error instanceof Error) {
-          console.error('Capture: Error starting recording:', error.message);
-        } else {
-          console.error('Capture: Error starting recording:', error);
-        }
-      }
-      alert('No se pudo acceder al micrófono');
-    }
-  }, [handleFileUpload]);
-
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && isRecording) {
-      if (import.meta.env.VITE_DEV === 'TRUE') {
-        console.log('Capture: Stopping recording...');
-      }
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      
-      if (recordingIntervalRef.current) {
-        clearInterval(recordingIntervalRef.current);
-        recordingIntervalRef.current = null;
-      }
-    }
-  }, [isRecording]);
 
   // Verificar si el input es suficiente para procesamiento IA
   const isInputReadyForAI = useCallback((input: string): boolean => {
@@ -682,7 +524,6 @@ const Capture: React.FC = () => {
       inputType: 'text',
       file: undefined
     }));
-    setImagePreview(null); // Limpiar preview de imagen
     if (import.meta.env.VITE_DEV === 'TRUE') {
       console.log('Capture: Text input changed:', value.substring(0, 50), '...');
     }
@@ -862,7 +703,6 @@ const Capture: React.FC = () => {
     setShowPreview(false);
     setValidation({ isValid: true, errors: [], warnings: [] });
     setProcessError(null);
-    setImagePreview(null);
     setCustomDate('');
     if (import.meta.env.VITE_DEV === 'TRUE') {
       console.log('Capture: Form cleared.');
@@ -881,12 +721,8 @@ const Capture: React.FC = () => {
       if (import.meta.env.VITE_DEV === 'TRUE') {
         console.log('Capture component unmounted.');
       }
-      // Clean up recording if unmounted during recording
-      if (isRecording && mediaRecorderRef.current) {
-        stopRecording();
-      }
     };
-  }, [isRecording, stopRecording]);
+  }, []);
 
   return (
     <div className="capture-page">
@@ -936,61 +772,6 @@ const Capture: React.FC = () => {
                 <span className="button-label">Texto</span>
               </button>
               
-              <button 
-                className="type-button"
-                onClick={() => {
-                  imageInputRef.current?.click();
-                  if (import.meta.env.VITE_DEV === 'TRUE') {
-                    console.log('Capture: Camera button clicked.');
-                  }
-                }}
-              >
-                <span className="button-icon">📷</span>
-                <span className="button-label">Cámara</span>
-              </button>
-              
-              <button 
-                className="type-button"
-                onClick={() => {
-                  galleryInputRef.current?.click();
-                  if (import.meta.env.VITE_DEV === 'TRUE') {
-                    console.log('Capture: Gallery button clicked.');
-                  }
-                }}
-              >
-                <span className="button-icon">🖼️</span>
-                <span className="button-label">Galería</span>
-              </button>
-              
-              <button 
-                className={`type-button ${isRecording ? 'recording' : ''}`}
-                onClick={() => {
-                  if (isRecording) {
-                    stopRecording();
-                  } else {
-                    startRecording();
-                  }
-                  if (import.meta.env.VITE_DEV === 'TRUE') {
-                    console.log('Capture: Audio recording button clicked.', { isRecording });
-                  }
-                }}
-              >
-                <span className="button-icon">{isRecording ? '🔴' : '🎤'}</span>
-                <span className="button-label">{isRecording ? `${recordingTime}s` : 'Audio'}</span>
-              </button>
-              
-              <button 
-                className="type-button"
-                onClick={() => {
-                  fileInputRef.current?.click();
-                  if (import.meta.env.VITE_DEV === 'TRUE') {
-                    console.log('Capture: File button clicked.');
-                  }
-                }}
-              >
-                <span className="button-icon">📎</span>
-                <span className="button-label">Archivo</span>
-              </button>
             </div>
           </div>
 
@@ -1036,48 +817,6 @@ const Capture: React.FC = () => {
             </div>
           )}
 
-          {/* File Inputs (hidden) */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.txt,.doc,.docx,.wav,.mp3,.mp4"
-            onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
-            style={{ display: 'none' }}
-          />
-          <input
-            ref={imageInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
-            style={{ display: 'none' }}
-          />
-          <input
-            ref={galleryInputRef}
-            type="file"
-            accept="image/*"
-            onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
-            style={{ display: 'none' }}
-          />
-
-          {/* Image Preview con diseño mejorado */}
-          {imagePreview && (
-            <div className="image-preview-container elegant">
-              <button 
-                className="remove-image"
-                onClick={() => {
-                  setImagePreview(null);
-                  setCaptureData(prev => ({ ...prev, input: '', file: undefined }));
-                  if (import.meta.env.VITE_DEV === 'TRUE') {
-                    console.log('Capture: Image preview removed.');
-                  }
-                }}
-              >
-                ✕
-              </button>
-              <img src={imagePreview} alt="Vista previa" className="image-preview" />
-            </div>
-          )}
 
           {/* Process Button con diseño mejorado */}
           <div className="action-buttons elegant">
@@ -1099,7 +838,7 @@ const Capture: React.FC = () => {
               )}
             </button>
             
-            {(captureData.input || imagePreview) && (
+            {captureData.input && (
               <button
                 className="secondary-button"
                 onClick={clearForm}
