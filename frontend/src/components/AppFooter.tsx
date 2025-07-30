@@ -12,7 +12,7 @@ const AppFooter: React.FC<AppFooterProps> = ({ className = '' }) => {
         <div className="footer-info">
           <span className="app-name">Chimuelo</span>
           <span className="footer-separator">•</span>
-          <AppVersion showLabel />
+          <AppVersion showLabel format="detailed" showTooltip />
         </div>
         <div className="footer-love">
           <span>Hecho con 💙 para Maxi</span>

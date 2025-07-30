@@ -18,6 +18,7 @@ import './styles/tailwind.css';
 import './App.css';
 import './styles/themes.css';
 import './styles/ErrorBoundary.css';
+import './styles/Footer.css';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
