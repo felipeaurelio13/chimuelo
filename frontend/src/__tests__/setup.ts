@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import { vi, beforeAll, afterAll, afterEach } from 'vitest';
 
 // Mock IndexedDB
 Object.defineProperty(window, 'indexedDB', {
@@ -21,7 +21,7 @@ Object.defineProperty(global, 'crypto', {
       deriveBits: vi.fn(),
       digest: vi.fn(),
     },
-    getRandomValues: vi.fn((arr) => {
+    getRandomValues: vi.fn((arr: Uint8Array) => {
       for (let i = 0; i < arr.length; i++) {
         arr[i] = Math.floor(Math.random() * 256);
       }
@@ -44,11 +44,12 @@ Object.defineProperty(global, 'performance', {
 });
 
 // Mock PerformanceObserver
-global.PerformanceObserver = vi.fn().mockImplementation((callback) => ({
+global.PerformanceObserver = vi.fn().mockImplementation((callback: any) => ({
   observe: vi.fn(),
   disconnect: vi.fn(),
   takeRecords: vi.fn(() => []),
 }));
+(global.PerformanceObserver as any).supportedEntryTypes = ['navigation', 'resource', 'measure', 'mark'];
 
 // Mock ResizeObserver
 global.ResizeObserver = vi.fn().mockImplementation(() => ({
@@ -96,7 +97,7 @@ global.fetch = vi.fn();
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
-  value: vi.fn().mockImplementation((query) => ({
+  value: vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
     onchange: null,

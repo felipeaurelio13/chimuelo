@@ -72,7 +72,7 @@ describe('DatabaseService', () => {
 
     it('should attempt to update settings', async () => {
       try {
-        await databaseService.updateSettings('user-123', { theme: 'dark' });
+        await databaseService.updateSettings('user-123', { ui: { theme: 'dark', babyMode: false, autoNightMode: true } });
         expect(true).toBe(true);
       } catch (error) {
         expect(typeof databaseService.updateSettings).toBe('function');
@@ -86,6 +86,7 @@ describe('DatabaseService', () => {
         userId: 'user-123',
         type: 'weight' as const,
         data: { value: 15.5, unit: 'kg' },
+        timestamp: new Date(),
         confidence: 0.95,
         requiresAttention: false,
         tags: ['growth'],

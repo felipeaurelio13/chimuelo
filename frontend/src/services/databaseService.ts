@@ -144,7 +144,7 @@ class DatabaseService {
   }
 
   // Initialize database
-  private async init(): Promise<void> {
+  public async init(): Promise<void> {
     try {
       this.db = await openDB(DB_NAME, DB_VERSION, {
         upgrade(db, oldVersion, newVersion) {
@@ -235,6 +235,57 @@ class DatabaseService {
   // Generate unique ID
   private generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  // CRUD Operations for Users
+  async createUser(user: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {
+    const db = await this.ensureReady();
+    
+    const newUser: User = {
+      ...user,
+      id: this.generateId(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    await db.add(STORES.USERS, newUser);
+    return newUser;
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    const db = await this.ensureReady();
+    return await db.get(STORES.USERS, id);
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const db = await this.ensureReady();
+    const transaction = db.transaction(STORES.USERS, 'readonly');
+    const store = transaction.objectStore(STORES.USERS);
+    const index = store.index('email');
+    return await index.get(email);
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User> {
+    const db = await this.ensureReady();
+    const existing = await this.getUser(id);
+    
+    if (!existing) {
+      throw new Error(`User with id ${id} not found`);
+    }
+
+    const updated: User = {
+      ...existing,
+      ...updates,
+      updatedAt: new Date()
+    };
+
+    await db.put(STORES.USERS, updated);
+    return updated;
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    const db = await this.ensureReady();
+    await db.delete(STORES.USERS, id);
   }
 
   // CRUD Operations for Health Records
