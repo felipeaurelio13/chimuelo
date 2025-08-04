@@ -56,8 +56,8 @@
     "vitest": "^3.2.4"
   },
   "buildInfo": {
-    "commitHash": "181d3fee227b5c2ef26b42153adffb816eeb8f88",
-    "buildDate": "2025-08-04T13:05:29.650Z",
-    "branch": "cursor/debug-chimuelo-github-actions-failure-f656"
+    "commitHash": "0ee0f5e03105d69b27c886470242e097271840e7",
+    "buildDate": "2025-08-04T13:16:54.915Z",
+    "branch": "cursor/build-failed-during-artifact-upload-642a"
   }
 }

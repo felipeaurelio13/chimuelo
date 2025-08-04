@@ -39,6 +39,9 @@ jobs:
           npm run prepare
           # Verify WASM setup
           ls -la node_modules/@rollup/wasm-node/dist/native.js
+          # Debug: Check node_modules structure
+          echo "Checking node_modules structure..."
+          ls -la node_modules/@rollup/
           
       - name: Show version info
         run: |
@@ -51,6 +54,11 @@ jobs:
           cd frontend
           # Build with error handling
           NODE_ENV=production npm run build
+          # Debug: Check if dist directory exists and has content
+          echo "Checking dist directory..."
+          ls -la dist/
+          echo "Checking dist contents..."
+          find dist/ -type f
 
       - name: Prepare for GitHub Pages (disable Jekyll)
         run: |
@@ -63,9 +71,10 @@ jobs:
         uses: actions/configure-pages@v4
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: frontend/dist
+        continue-on-error: false
 
   deploy-worker:
     runs-on: ubuntu-latest
