@@ -35,6 +35,10 @@ jobs:
           cd frontend
           # Clean install with error handling
           npm ci --prefer-offline --no-audit
+          # Ensure Rollup WASM setup is completed
+          npm run prepare
+          # Verify WASM setup
+          ls -la node_modules/@rollup/wasm-node/dist/native.js
           
       - name: Show version info
         run: |
