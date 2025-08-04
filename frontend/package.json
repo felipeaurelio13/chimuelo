@@ -55,8 +55,8 @@
     "msw": "^2.6.4"
   },
   "buildInfo": {
-    "commitHash": "c93a25b07c8f7282ad077c64b4386964f7309345",
-    "buildDate": "2025-08-04T03:08:39.187Z",
+    "commitHash": "5f774528cad97a1920ad762445c7935365b9e50b",
+    "buildDate": "2025-08-04T03:11:11.718Z",
     "branch": "cursor/fix-frontend-build-and-test-errors-c1dd"
   }
 }
