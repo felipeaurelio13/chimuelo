@@ -55,8 +55,8 @@
     "msw": "^2.6.4"
   },
   "buildInfo": {
-    "commitHash": "0dce0206e7db2dc62c7e3731612e3c80ea760900",
-    "buildDate": "2025-07-30T03:59:46.869Z",
-    "branch": "cursor/implementar-conversaci-n-y-detecci-n-de-agentes-ea6e"
+    "commitHash": "c93a25b07c8f7282ad077c64b4386964f7309345",
+    "buildDate": "2025-08-04T03:08:39.187Z",
+    "branch": "cursor/fix-frontend-build-and-test-errors-c1dd"
   }
 }
