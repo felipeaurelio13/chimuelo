@@ -9,6 +9,10 @@
     "build:dev": "tsc -b && vite build",
     "lint": "eslint . --max-warnings 0",
     "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:run": "vitest run",
     "version:patch": "npm version patch --no-git-tag-version",
     "version:minor": "npm version minor --no-git-tag-version",
     "version:major": "npm version major --no-git-tag-version",
@@ -40,7 +44,15 @@
     "@rollup/wasm-node": "^4.46.1",
     "tailwindcss": "^3.4.4",
     "postcss": "^8.4.32",
-    "autoprefixer": "^10.4.16"
+    "autoprefixer": "^10.4.16",
+    "vitest": "^3.2.4",
+    "@vitest/ui": "^3.2.4",
+    "@vitest/coverage-v8": "^3.2.4",
+    "jsdom": "^25.0.1",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/user-event": "^14.5.2",
+    "msw": "^2.6.4"
   },
   "buildInfo": {
     "commitHash": "0dce0206e7db2dc62c7e3731612e3c80ea760900",
